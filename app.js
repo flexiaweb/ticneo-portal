@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec'; // Reemplaza por tu URL de Apps Script
+const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec'; // Reemplaza por tu URL de Apps Script
 
 let currentData = [];
 
