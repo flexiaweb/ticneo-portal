@@ -1,17 +1,14 @@
-// app.js
-
-// Pega aquí la URL que te dio Apps Script en el Paso 2
-const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec';
+const API_URL = 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec'; // Reemplaza por tu URL de Apps Script
 
 let currentData = [];
 
-// Carga e interpretación de datos JSON desde Google Apps Script
+// Cargar datos
 async function loadSheetData() {
   const tbody = document.getElementById('tableBody');
   
   try {
     const response = await fetch(API_URL);
-    if (!response.ok) throw new Error("No se pudo conectar con la API.");
+    if (!response.ok) throw new Error("Error en la conexión con la API.");
     
     currentData = await response.json();
 
@@ -28,14 +25,13 @@ async function loadSheetData() {
     tbody.innerHTML = `
       <tr>
         <td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">
-          ⚠️ Error al conectar con el servicio de Almacén.<br>
-          <small style="color: var(--text-muted);">Verifica la configuración del despliegue en Google Apps Script.</small>
+          ⚠️ Error al conectar con el servicio de Almacén.
         </td>
       </tr>`;
   }
 }
 
-// Renderizar las filas recibidas de la API
+// Renderizar tabla
 function renderTable(data) {
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
@@ -47,7 +43,6 @@ function renderTable(data) {
 
   data.forEach(row => {
     const id = row[0] || '-';
-    // Dar formato de fecha limpia si Google la devuelve en formato ISO
     const fecha = row[1] ? String(row[1]).split('T')[0] : '-';
     const articulo = row[2] || '-';
     const tipoMov = row[3] || 'Entrada';
@@ -74,7 +69,7 @@ function renderTable(data) {
   });
 }
 
-// Calcular métricas
+// Métricas
 function updateKPIs(data) {
   document.getElementById('kpiTotal').textContent = data.length;
   
@@ -93,7 +88,7 @@ function updateKPIs(data) {
   document.getElementById('kpiSalidas').textContent = '-' + salidas;
 }
 
-// Filtrar la tabla
+// Búsqueda / Filtro
 function filterTable() {
   const searchValue = document.getElementById('searchInput').value.toLowerCase();
   const typeValue = document.getElementById('typeFilter').value;
@@ -111,6 +106,55 @@ function filterTable() {
   });
 
   renderTable(filtered);
+}
+
+// Control del Modal
+function openModal() {
+  document.getElementById('fecha').valueAsDate = new Date();
+  document.getElementById('movementModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('movementModal').classList.remove('active');
+  document.getElementById('addMovementForm').reset();
+}
+
+// Enviar Nuevo Registro
+async function submitForm(e) {
+  e.preventDefault();
+  const btnSubmit = document.getElementById('btnSubmit');
+  btnSubmit.disabled = true;
+  btnSubmit.textContent = 'Guardando...';
+
+  const newRecord = {
+    fecha: document.getElementById('fecha').value,
+    articulo: document.getElementById('articulo').value,
+    tipoMov: document.getElementById('tipoMov').value,
+    cantidad: document.getElementById('cantidad').value,
+    tipoSolicitante: document.getElementById('tipoSolicitante').value,
+    detalleSolicitante: document.getElementById('detalleSolicitante').value,
+    notas: document.getElementById('notas').value
+  };
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(newRecord)
+    });
+
+    if (response.ok) {
+      closeModal();
+      await loadSheetData(); // Recargar datos automáticamente
+    } else {
+      alert("Error al intentar guardar el registro.");
+    }
+  } catch (err) {
+    console.error("Error guardando:", err);
+    alert("Ocurrió un error al guardar el movimiento.");
+  } finally {
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = 'Guardar Registro';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', loadSheetData);
