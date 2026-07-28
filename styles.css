@@ -519,3 +519,26 @@
     gap: 0.75rem;
     margin-top: 1.5rem;
   }
+  /* Botones de Selector de Vista */
+.btn-view {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-view:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .btn-view.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  }

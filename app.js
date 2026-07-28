@@ -1,46 +1,116 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec'; // Reemplaza por tu URL de Apps Script
 
 let currentData = [];
+let currentView = 'history'; // 'history' o 'stock'
 
-// Cargar datos
-// Cargar datos sin caché
+// 1. Cargar Datos
 async function loadSheetData() {
-    const tbody = document.getElementById('tableBody');
-    
-    try {
-      // Añadimos ?_nocache=TIMESTAMP para romper la memoria caché del CDN de Google
-      const noCacheUrl = `${API_URL}?_nocache=${new Date().getTime()}`;
-      
-      const response = await fetch(noCacheUrl, {
-        cache: 'no-store' // Forzar al navegador a no guardar en caché
-      });
-  
-      if (!response.ok) throw new Error("Error en la conexión con la API.");
-      
-      currentData = await response.json();
-  
-      if (!Array.isArray(currentData) || currentData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
-        return;
-      }
-  
-      renderTable(currentData);
-      updateKPIs(currentData);
-  
-    } catch (error) {
-      console.error("Error al cargar la API:", error);
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">
-            ⚠️ Error al conectar con el servicio de Almacén.
-          </td>
-        </tr>`;
-    }
-  }
-
-// Renderizar tabla
-function renderTable(data) {
   const tbody = document.getElementById('tableBody');
+  
+  try {
+    const noCacheUrl = `${API_URL}?_nocache=${new Date().getTime()}`;
+    const response = await fetch(noCacheUrl, { cache: 'no-store' });
+
+    if (!response.ok) throw new Error("Error en la conexión.");
+    
+    currentData = await response.json();
+
+    if (!Array.isArray(currentData) || currentData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
+      return;
+    }
+
+    renderCurrentView();
+    updateKPIs(currentData);
+    populateArticleDatalist();
+
+  } catch (error) {
+    console.error("Error al cargar datos:", error);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con el servicio de Almacén.</td></tr>`;
+  }
+}
+
+// 2. Calcular el Inventario / Stock por producto
+function calculateInventory(data) {
+  const inventory = {};
+
+  data.forEach(row => {
+    const articulo = row[2] ? String(row[2]).trim() : 'Sin Nombre';
+    const tipoMov = row[3] ? String(row[3]).toLowerCase() : '';
+    const cantidad = parseInt(row[4], 10) || 0;
+
+    if (!inventory[articulo]) {
+      inventory[articulo] = { entradas: 0, salidas: 0, stock: 0 };
+    }
+
+    if (tipoMov.includes('entrada')) {
+      inventory[articulo].entradas += cantidad;
+      inventory[articulo].stock += cantidad;
+    } else if (tipoMov.includes('salida')) {
+      inventory[articulo].salidas += cantidad;
+      inventory[articulo].stock -= cantidad;
+    }
+  });
+
+  return inventory;
+}
+
+// 3. Poblar la lista de sugerencias en el formulario
+function populateArticleDatalist() {
+  const datalist = document.getElementById('articlesList');
+  if (!datalist) return;
+
+  datalist.innerHTML = '';
+  const inventory = calculateInventory(currentData);
+
+  Object.keys(inventory).sort().forEach(artName => {
+    const stock = inventory[artName].stock;
+    const option = document.createElement('option');
+    option.value = artName;
+    option.label = `Stock actual: ${stock} ud(s).`;
+    datalist.appendChild(option);
+  });
+}
+
+// 4. Cambiar entre vista Histórico / Inventario
+function setView(view) {
+  currentView = view;
+  
+  // Cambiar clases activas en botones
+  document.getElementById('btnViewHistory').classList.toggle('active', view === 'history');
+  document.getElementById('btnViewStock').classList.toggle('active', view === 'stock');
+  
+  // Ocultar/Mostrar filtros según la vista
+  document.getElementById('typeFilterContainer').style.display = view === 'history' ? 'block' : 'none';
+
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (currentView === 'history') {
+    filterTable();
+  } else {
+    renderStockTable();
+  }
+}
+
+// 5. Renderizar vista de HISTORIAL
+function renderHistoryTable(data) {
+  const thead = document.getElementById('tableHeader');
+  const tbody = document.getElementById('tableBody');
+  
+  thead.innerHTML = `
+    <tr>
+      <th>ID</th>
+      <th>Fecha</th>
+      <th>Artículo</th>
+      <th>Tipo Mov.</th>
+      <th>Cantidad</th>
+      <th>Tipo Solicitante</th>
+      <th>Detalle Solicitante</th>
+      <th>Notas</th>
+    </tr>`;
+
   tbody.innerHTML = '';
 
   if (data.length === 0) {
@@ -76,7 +146,50 @@ function renderTable(data) {
   });
 }
 
-// Métricas
+// 6. Renderizar vista de STOCK ACUMULADO
+function renderStockTable() {
+  const thead = document.getElementById('tableHeader');
+  const tbody = document.getElementById('tableBody');
+  const searchValue = document.getElementById('searchInput').value.toLowerCase();
+
+  thead.innerHTML = `
+    <tr>
+      <th>Artículo / Insumo</th>
+      <th>Total Entradas</th>
+      <th>Total Salidas</th>
+      <th>Stock Actual</th>
+      <th>Estado</th>
+    </tr>`;
+
+  tbody.innerHTML = '';
+  const inventory = calculateInventory(currentData);
+
+  const filteredItems = Object.keys(inventory).filter(item => item.toLowerCase().includes(searchValue));
+
+  if (filteredItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron artículos.</td></tr>`;
+    return;
+  }
+
+  filteredItems.sort().forEach(artName => {
+    const item = inventory[artName];
+    const isAvailable = item.stock > 0;
+    const badgeClass = isAvailable ? 'badge-entrada' : 'badge-salida';
+    const statusText = isAvailable ? 'Disponible' : 'Agotado';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#fff; font-weight: 600; font-size: 1rem;">📦 ${artName}</td>
+      <td style="color: #4ade80;">+${item.entradas}</td>
+      <td style="color: #f87171;">-${item.salidas}</td>
+      <td style="font-size: 1.1rem;"><strong>${item.stock} ud(s).</strong></td>
+      <td><span class="badge-mov ${badgeClass}">${statusText}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 7. KPIs y Filtros
 function updateKPIs(data) {
   document.getElementById('kpiTotal').textContent = data.length;
   
@@ -95,8 +208,12 @@ function updateKPIs(data) {
   document.getElementById('kpiSalidas').textContent = '-' + salidas;
 }
 
-// Búsqueda / Filtro
 function filterTable() {
+  if (currentView === 'stock') {
+    renderStockTable();
+    return;
+  }
+
   const searchValue = document.getElementById('searchInput').value.toLowerCase();
   const typeValue = document.getElementById('typeFilter').value;
 
@@ -112,12 +229,13 @@ function filterTable() {
     return matchesSearch && matchesType;
   });
 
-  renderTable(filtered);
+  renderHistoryTable(filtered);
 }
 
-// Control del Modal
+// 8. Abrir/Cerrar Modal
 function openModal() {
   document.getElementById('fecha').valueAsDate = new Date();
+  populateArticleDatalist();
   document.getElementById('movementModal').classList.add('active');
 }
 
@@ -126,47 +244,43 @@ function closeModal() {
   document.getElementById('addMovementForm').reset();
 }
 
-// Enviar Nuevo Registro
+// 9. Guardar Registro
 async function submitForm(e) {
-    e.preventDefault();
-    const btnSubmit = document.getElementById('btnSubmit');
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = 'Guardando...';
-  
-    const newRecord = {
-      fecha: document.getElementById('fecha').value,
-      articulo: document.getElementById('articulo').value,
-      tipoMov: document.getElementById('tipoMov').value,
-      cantidad: document.getElementById('cantidad').value,
-      tipoSolicitante: document.getElementById('tipoSolicitante').value,
-      detalleSolicitante: document.getElementById('detalleSolicitante').value,
-      notas: document.getElementById('notas').value
-    };
-  
-    try {
-      // Usamos 'text/plain' para evitar preflight OPTIONS bloqueados por Google
-      await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(newRecord)
-      });
-  
-      closeModal();
-      // Esperamos 1.5 segundos para que Google Sheets termine de escribir el registro
-      setTimeout(async () => {
-        await loadSheetData();
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = 'Guardar Registro';
-      }, 1500);
-  
-    } catch (err) {
-      console.error("Error guardando:", err);
-      alert("Ocurrió un error al guardar el movimiento.");
+  e.preventDefault();
+  const btnSubmit = document.getElementById('btnSubmit');
+  btnSubmit.disabled = true;
+  btnSubmit.textContent = 'Guardando...';
+
+  const newRecord = {
+    fecha: document.getElementById('fecha').value,
+    articulo: document.getElementById('articulo').value,
+    tipoMov: document.getElementById('tipoMov').value,
+    cantidad: document.getElementById('cantidad').value,
+    tipoSolicitante: document.getElementById('tipoSolicitante').value,
+    detalleSolicitante: document.getElementById('detalleSolicitante').value,
+    notas: document.getElementById('notas').value
+  };
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(newRecord)
+    });
+
+    closeModal();
+    setTimeout(async () => {
+      await loadSheetData();
       btnSubmit.disabled = false;
       btnSubmit.textContent = 'Guardar Registro';
-    }
+    }, 1500);
+
+  } catch (err) {
+    console.error("Error guardando:", err);
+    alert("Ocurrió un error al guardar.");
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = 'Guardar Registro';
   }
+}
 
 window.addEventListener('DOMContentLoaded', loadSheetData);

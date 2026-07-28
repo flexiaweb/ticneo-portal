@@ -32,10 +32,12 @@
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h2>📦 Almacén de Sistemas</h2>
-        <p>Histórico de Registro de Entradas y Salidas de Materiales e Insumos.</p>
+        <p>Gestión de Inventario e Histórico de Entradas y Salidas.</p>
       </div>
-      <!-- Botón para abrir el formulario modal -->
-      <button class="btn-primary" onclick="openModal()">+ Nuevo Movimiento</button>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-secondary" onclick="loadSheetData()" title="Refrescar">🔄 Actualizar</button>
+        <button class="btn-primary" onclick="openModal()">+ Nuevo Movimiento</button>
+      </div>
     </div>
 
     <!-- Tarjetas KPI Resumen -->
@@ -54,40 +56,38 @@
       </div>
     </div>
 
-    <!-- Controles (Buscador y Filtros) -->
-    <div class="table-controls">
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Buscar artículo, solicitante, notas..." oninput="filterTable()">
+    <!-- Controles (Con pestañas de Vista) -->
+    <div class="table-controls" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btnViewHistory" class="btn-view active" onclick="setView('history')">📜 Histórico</button>
+        <button id="btnViewStock" class="btn-view" onclick="setView('stock')">📊 Stock Actual</button>
       </div>
-      <div class="filter-group">
-        <div class="filter-select">
-          <select id="typeFilter" onchange="filterTable()">
-            <option value="ALL">Todos los Movimientos</option>
-            <option value="Entrada">Solo Entradas</option>
-            <option value="Salida">Solo Salidas</option>
-          </select>
+
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Buscar..." oninput="filterTable()">
+        </div>
+        <div class="filter-group" id="typeFilterContainer">
+          <div class="filter-select">
+            <select id="typeFilter" onchange="filterTable()">
+              <option value="ALL">Todos los Movimientos</option>
+              <option value="Entrada">Solo Entradas</option>
+              <option value="Salida">Solo Salidas</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Contenedor de Tabla de Movimientos -->
+    <!-- Contenedor de Tabla -->
     <div class="table-container">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Artículo</th>
-            <th>Tipo Mov.</th>
-            <th>Cantidad</th>
-            <th>Tipo Solicitante</th>
-            <th>Detalle Solicitante</th>
-            <th>Notas</th>
-          </tr>
+        <thead id="tableHeader">
+          <!-- Dinámico mediante JS -->
         </thead>
         <tbody id="tableBody">
           <tr>
-            <td colspan="8" class="loading-box">Cargando histórico...</td>
+            <td colspan="8" class="loading-box">Cargando datos...</td>
           </tr>
         </tbody>
       </table>
@@ -108,10 +108,16 @@
             <label for="fecha">Fecha</label>
             <input type="date" id="fecha" required>
           </div>
+
+          <!-- Input con Autocompletado Datalist -->
           <div class="form-group">
             <label for="articulo">Artículo / Insumo</label>
-            <input type="text" id="articulo" placeholder="Ej. Monitor Dell 27&quot;" required>
+            <input type="text" id="articulo" list="articlesList" placeholder="Escribe o selecciona..." autocomplete="off" required>
+            <datalist id="articlesList">
+              <!-- Se autocompleta con JavaScript -->
+            </datalist>
           </div>
+
           <div class="form-group">
             <label for="tipoMov">Tipo de Movimiento</label>
             <select id="tipoMov" required>
@@ -125,15 +131,15 @@
           </div>
           <div class="form-group">
             <label for="tipoSolicitante">Tipo de Solicitante</label>
-            <input type="text" id="tipoSolicitante" placeholder="Ej. Empleado, Proveedor, Dpto">
+            <input type="text" id="tipoSolicitante" placeholder="Ej. Empleado, Dpto">
           </div>
           <div class="form-group">
             <label for="detalleSolicitante">Detalle Solicitante</label>
-            <input type="text" id="detalleSolicitante" placeholder="Ej. Juan Pérez / Sala B">
+            <input type="text" id="detalleSolicitante" placeholder="Ej. Juan Pérez">
           </div>
           <div class="form-group full-width">
             <label for="notas">Notas / Observaciones</label>
-            <textarea id="notas" rows="3" placeholder="Detalles adicionales del movimiento..."></textarea>
+            <textarea id="notas" rows="3" placeholder="Detalles del movimiento..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
