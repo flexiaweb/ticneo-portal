@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Almacén de Sistemas - Ticneo Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Encabezado Principal -->
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div class="user-info">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Módulo Almacén</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main>
+    <a href="index.html" class="btn-back">&larr; Volver al Portal Principal</a>
+
+    <div class="section-header">
+      <h2>📦 Almacén de Sistemas</h2>
+      <p>Histórico de Registro de Entradas y Salidas de Materiales e Insumos.</p>
+    </div>
+
+    <!-- Tarjetas KPI Resumen -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Total Registros</span>
+        <span class="kpi-value" id="kpiTotal">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Total Entradas</span>
+        <span class="kpi-value entrada" id="kpiEntradas">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Total Salidas</span>
+        <span class="kpi-value salida" id="kpiSalidas">0</span>
+      </div>
+    </div>
+
+    <!-- Controles (Buscador y Filtros) -->
+    <div class="table-controls">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Buscar artículo, solicitante, notas..." oninput="filterTable()">
+      </div>
+      <div class="filter-group">
+        <div class="filter-select">
+          <select id="typeFilter" onchange="filterTable()">
+            <option value="ALL">Todos los Movimientos</option>
+            <option value="Entrada">Solo Entradas</option>
+            <option value="Salida">Solo Salidas</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor de Tabla de Movimientos -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Artículo</th>
+            <th>Tipo Mov.</th>
+            <th>Cantidad</th>
+            <th>Tipo Solicitante</th>
+            <th>Detalle Solicitante</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="8" class="loading-box">Cargando histórico desde Google Sheets...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+<script>
+  // Tu enlace público CSV de Google Sheets
+  const ORIGINAL_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRY-aqQKndYV6qzXVxTaPidP7AJru79HdunryX-DbTr3hfYUHEK93qfX-4_A_i_z7p0syFTVXqawVcI/pub?gid=0&single=true&output=csv';
+
+  let currentData = [];
+
+  async function fetchCSVData(url) {
+    // Intento 1: Petición directa
+    try {
+      const response = await fetch(url);
+      if (response.ok) return await response.text();
+    } catch (e) {
+      console.warn("Petición directa fallida por CORS/Protocolo. Intentando a través de Proxy...", e);
+    }
+
+    // Intento 2: Petición usando Proxy CORS para evitar bloqueos del navegador
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    const responseProxy = await fetch(proxyUrl);
+    if (!responseProxy.ok) throw new Error("No se pudo obtener el archivo incluso mediante proxy.");
+    return await responseProxy.text();
+  }
+
+  // Carga e interpretación de los datos
+  async function loadSheetData() {
+    const tbody = document.getElementById('tableBody');
+    
+    try {
+      const csvText = await fetchCSVData(ORIGINAL_SHEET_URL);
+      currentData = parseSmartCSV(csvText);
+
+      if (currentData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en la hoja de Google Sheets.</td></tr>`;
+        return;
+      }
+
+      renderTable(currentData);
+      updateKPIs(currentData);
+
+    } catch (error) {
+      console.error("Error cargando Google Sheet:", error);
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">
+            ⚠️ Error al leer los datos desde Google Sheets.<br>
+            <small style="color: var(--text-muted);">Si estás probando el archivo abriéndolo directamente (file:///), usa un servidor local como Live Server en VS Code.</small>
+          </td>
+        </tr>`;
+    }
+  }
+
+  // Parser inteligente de CSV/Texto
+  function parseSmartCSV(text) {
+    const lines = text.trim().split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length === 0) return [];
+
+    const firstLine = lines[0];
+    let separator = ',';
+    
+    if (firstLine.includes(';')) separator = ';';
+    else if (firstLine.includes('\t')) separator = '\t';
+    else if (firstLine.includes('-') && !firstLine.includes(',')) separator = '-';
+
+    const parsedRows = lines.map(line => {
+      return line.split(separator).map(cell => cell.replace(/^["']|["']$/g, '').trim());
+    });
+
+    // Omitir cabecera si existe
+    const firstCell = parsedRows[0][0] ? parsedRows[0][0].toLowerCase() : '';
+    if (firstCell.includes('id') || firstCell.includes('fecha')) {
+      return parsedRows.slice(1);
+    }
+
+    return parsedRows;
+  }
+
+  // Renderizar filas en la tabla
+  function renderTable(data) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron resultados.</td></tr>`;
+      return;
+    }
+
+    data.forEach(row => {
+      const id = row[0] || '-';
+      const fecha = row[1] || '-';
+      const articulo = row[2] || '-';
+      const tipoMov = row[3] || 'Entrada';
+      const cantidad = row[4] || '0';
+      const tipoSolicitante = row[5] || '-';
+      const detalleSolicitante = row[6] || '-';
+      const notas = row[7] || '-';
+
+      const isEntrada = tipoMov.toLowerCase().includes('entrada');
+      const badgeClass = isEntrada ? 'badge-entrada' : 'badge-salida';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>#${id}</strong></td>
+        <td>${fecha}</td>
+        <td style="color:#fff; font-weight: 500;">${articulo}</td>
+        <td><span class="badge-mov ${badgeClass}">${tipoMov}</span></td>
+        <td><strong>${cantidad}</strong></td>
+        <td>${tipoSolicitante}</td>
+        <td>${detalleSolicitante}</td>
+        <td style="color: var(--text-muted); font-size: 0.85rem;">${notas}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Actualizar métricas KPI
+  function updateKPIs(data) {
+    document.getElementById('kpiTotal').textContent = data.length;
+    
+    let entradas = 0;
+    let salidas = 0;
+
+    data.forEach(row => {
+      const tipo = row[3] ? row[3].toLowerCase() : '';
+      const qty = parseInt(row[4], 10) || 0;
+
+      if (tipo.includes('entrada')) entradas += qty;
+      else if (tipo.includes('salida')) salidas += qty;
+    });
+
+    document.getElementById('kpiEntradas').textContent = '+' + entradas;
+    document.getElementById('kpiSalidas').textContent = '-' + salidas;
+  }
+
+  // Filtro de búsqueda
+  function filterTable() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const typeValue = document.getElementById('typeFilter').value;
+
+    const filtered = currentData.filter(row => {
+      const matchesSearch = row.some(cell => cell && cell.toLowerCase().includes(searchValue));
+      
+      const tipoMov = row[3] ? row[3].toLowerCase() : '';
+      let matchesType = true;
+
+      if (typeValue === 'Entrada') matchesType = tipoMov.includes('entrada');
+      if (typeValue === 'Salida') matchesType = tipoMov.includes('salida');
+
+      return matchesSearch && matchesType;
+    });
+
+    renderTable(filtered);
+  }
+
+  window.addEventListener('DOMContentLoaded', loadSheetData);
+</script>
+</body>
+</html>
