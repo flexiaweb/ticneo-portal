@@ -3,33 +3,40 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1I
 let currentData = [];
 
 // Cargar datos
+// Cargar datos sin caché
 async function loadSheetData() {
-  const tbody = document.getElementById('tableBody');
-  
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error("Error en la conexión con la API.");
+    const tbody = document.getElementById('tableBody');
     
-    currentData = await response.json();
-
-    if (!Array.isArray(currentData) || currentData.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
-      return;
+    try {
+      // Añadimos ?_nocache=TIMESTAMP para romper la memoria caché del CDN de Google
+      const noCacheUrl = `${API_URL}?_nocache=${new Date().getTime()}`;
+      
+      const response = await fetch(noCacheUrl, {
+        cache: 'no-store' // Forzar al navegador a no guardar en caché
+      });
+  
+      if (!response.ok) throw new Error("Error en la conexión con la API.");
+      
+      currentData = await response.json();
+  
+      if (!Array.isArray(currentData) || currentData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
+        return;
+      }
+  
+      renderTable(currentData);
+      updateKPIs(currentData);
+  
+    } catch (error) {
+      console.error("Error al cargar la API:", error);
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">
+            ⚠️ Error al conectar con el servicio de Almacén.
+          </td>
+        </tr>`;
     }
-
-    renderTable(currentData);
-    updateKPIs(currentData);
-
-  } catch (error) {
-    console.error("Error al cargar la API:", error);
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">
-          ⚠️ Error al conectar con el servicio de Almacén.
-        </td>
-      </tr>`;
   }
-}
 
 // Renderizar tabla
 function renderTable(data) {
