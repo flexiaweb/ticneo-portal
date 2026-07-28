@@ -121,40 +121,45 @@ function closeModal() {
 
 // Enviar Nuevo Registro
 async function submitForm(e) {
-  e.preventDefault();
-  const btnSubmit = document.getElementById('btnSubmit');
-  btnSubmit.disabled = true;
-  btnSubmit.textContent = 'Guardando...';
-
-  const newRecord = {
-    fecha: document.getElementById('fecha').value,
-    articulo: document.getElementById('articulo').value,
-    tipoMov: document.getElementById('tipoMov').value,
-    cantidad: document.getElementById('cantidad').value,
-    tipoSolicitante: document.getElementById('tipoSolicitante').value,
-    detalleSolicitante: document.getElementById('detalleSolicitante').value,
-    notas: document.getElementById('notas').value
-  };
-
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(newRecord)
-    });
-
-    if (response.ok) {
+    e.preventDefault();
+    const btnSubmit = document.getElementById('btnSubmit');
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Guardando...';
+  
+    const newRecord = {
+      fecha: document.getElementById('fecha').value,
+      articulo: document.getElementById('articulo').value,
+      tipoMov: document.getElementById('tipoMov').value,
+      cantidad: document.getElementById('cantidad').value,
+      tipoSolicitante: document.getElementById('tipoSolicitante').value,
+      detalleSolicitante: document.getElementById('detalleSolicitante').value,
+      notas: document.getElementById('notas').value
+    };
+  
+    try {
+      // Usamos 'text/plain' para evitar preflight OPTIONS bloqueados por Google
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(newRecord)
+      });
+  
       closeModal();
-      await loadSheetData(); // Recargar datos automáticamente
-    } else {
-      alert("Error al intentar guardar el registro.");
+      // Esperamos 1.5 segundos para que Google Sheets termine de escribir el registro
+      setTimeout(async () => {
+        await loadSheetData();
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Guardar Registro';
+      }, 1500);
+  
+    } catch (err) {
+      console.error("Error guardando:", err);
+      alert("Ocurrió un error al guardar el movimiento.");
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Guardar Registro';
     }
-  } catch (err) {
-    console.error("Error guardando:", err);
-    alert("Ocurrió un error al guardar el movimiento.");
-  } finally {
-    btnSubmit.disabled = false;
-    btnSubmit.textContent = 'Guardar Registro';
   }
-}
 
 window.addEventListener('DOMContentLoaded', loadSheetData);
