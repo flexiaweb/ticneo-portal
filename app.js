@@ -1,19 +1,40 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec'; // Reemplaza por tu URL de Apps Script
+const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec';
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
+// Helper para obtener credenciales de la sesión
+function getAuthCredentials() {
+  return {
+    user: sessionStorage.getItem('ticneo_user') || '',
+    pass: sessionStorage.getItem('ticneo_pass') || ''
+  };
+}
+
 // 1. Cargar Datos
 async function loadSheetData() {
   const tbody = document.getElementById('tableBody');
+  const auth = getAuthCredentials();
   
   try {
-    const noCacheUrl = `${API_URL}?_nocache=${new Date().getTime()}`;
+    // Enviamos user y pass por URL para autenticar con Google Apps Script
+    const authParams = `user=${encodeURIComponent(auth.user)}&pass=${encodeURIComponent(auth.pass)}`;
+    const noCacheUrl = `${API_URL}?${authParams}&_nocache=${new Date().getTime()}`;
+    
     const response = await fetch(noCacheUrl, { cache: 'no-store' });
 
     if (!response.ok) throw new Error("Error en la conexión.");
     
-    currentData = await response.json();
+    const data = await response.json();
+
+    // Si Google responde con error de autorización
+    if (data.error === "Unauthorized") {
+      alert("⚠️ Credenciales incorrectas o sesión expirada.");
+      logout();
+      return;
+    }
+
+    currentData = data;
 
     if (!Array.isArray(currentData) || currentData.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
@@ -30,7 +51,7 @@ async function loadSheetData() {
   }
 }
 
-// 2. Calcular el Inventario / Stock por producto
+// 2. Calcular Inventario
 function calculateInventory(data) {
   const inventory = {};
 
@@ -55,7 +76,7 @@ function calculateInventory(data) {
   return inventory;
 }
 
-// 3. Poblar la lista de sugerencias en el formulario
+// 3. Poblar Datalist de Artículos
 function populateArticleDatalist() {
   const datalist = document.getElementById('articlesList');
   if (!datalist) return;
@@ -72,15 +93,11 @@ function populateArticleDatalist() {
   });
 }
 
-// 4. Cambiar entre vista Histórico / Inventario
+// 4. Cambiar Vistas
 function setView(view) {
   currentView = view;
-  
-  // Cambiar clases activas en botones
   document.getElementById('btnViewHistory').classList.toggle('active', view === 'history');
   document.getElementById('btnViewStock').classList.toggle('active', view === 'stock');
-  
-  // Ocultar/Mostrar filtros según la vista
   document.getElementById('typeFilterContainer').style.display = view === 'history' ? 'block' : 'none';
 
   renderCurrentView();
@@ -94,7 +111,7 @@ function renderCurrentView() {
   }
 }
 
-// 5. Renderizar vista de HISTORIAL
+// 5. Tabla Histórico
 function renderHistoryTable(data) {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
@@ -146,7 +163,7 @@ function renderHistoryTable(data) {
   });
 }
 
-// 6. Renderizar vista de STOCK ACUMULADO
+// 6. Tabla Stock Acumulado
 function renderStockTable() {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
@@ -192,7 +209,6 @@ function renderStockTable() {
 // 7. KPIs y Filtros
 function updateKPIs(data) {
   document.getElementById('kpiTotal').textContent = data.length;
-  
   let entradas = 0;
   let salidas = 0;
 
@@ -219,7 +235,6 @@ function filterTable() {
 
   const filtered = currentData.filter(row => {
     const matchesSearch = row.some(cell => cell && String(cell).toLowerCase().includes(searchValue));
-    
     const tipoMov = row[3] ? String(row[3]).toLowerCase() : '';
     let matchesType = true;
 
@@ -232,7 +247,7 @@ function filterTable() {
   renderHistoryTable(filtered);
 }
 
-// 8. Abrir/Cerrar Modal
+// 8. Modales
 function openModal() {
   document.getElementById('fecha').valueAsDate = new Date();
   populateArticleDatalist();
@@ -251,7 +266,12 @@ async function submitForm(e) {
   btnSubmit.disabled = true;
   btnSubmit.textContent = 'Guardando...';
 
+  const auth = getAuthCredentials();
+
+  // Incluimos credenciales en el body del POST
   const newRecord = {
+    user: auth.user,
+    pass: auth.pass,
     fecha: document.getElementById('fecha').value,
     articulo: document.getElementById('articulo').value,
     tipoMov: document.getElementById('tipoMov').value,
@@ -262,7 +282,7 @@ async function submitForm(e) {
   };
 
   try {
-    await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(newRecord)
