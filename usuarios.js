@@ -9,8 +9,10 @@ import {
   deleteDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
 let usersList = [];
 
@@ -34,7 +36,7 @@ async function loadUsers() {
   }
 }
 
-// 2. RENDERIZAR TABLA CON ESTILOS ACTUALIZADOS
+// 2. RENDERIZAR TABLA
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   tbody.innerHTML = '';
@@ -45,7 +47,7 @@ function renderUsersTable() {
   }
 
   usersList.forEach(user => {
-    const isActivo = user.activo !== false; // Por defecto activo
+    const isActivo = user.activo !== false;
     const statusBadge = isActivo 
       ? '<span class="badge-mov badge-entrada">Activo</span>' 
       : '<span class="badge-mov badge-salida">Inactivo</span>';
@@ -78,21 +80,21 @@ async function toggleUserStatus(uid, currentStatus) {
   }
 }
 
-// 4. CAMBIO DE CONTRASEÑA (Enviar enlace oficial de restablecimiento)
+// 4. RESTABLECER CONTRASEÑA
 async function sendResetPassword(email) {
   if (!email) return alert("El usuario no tiene un correo válido.");
-  if (confirm(`¿Enviar un correo a ${email} para que reestablezca su contraseña?`)) {
+  if (confirm(`¿Enviar petición de restablecimiento a ${email}?`)) {
     try {
       await sendPasswordResetEmail(auth, email);
-      alert(`Correo enviado con éxito a ${email}`);
+      alert(`Correo de restablecimiento enviado a ${email}`);
     } catch (error) {
       console.error("Error enviando reset password:", error);
-      alert("Error al enviar el correo de recuperación.");
+      alert("Error al enviar el restablecimiento.");
     }
   }
 }
 
-// 5. ELIMINAR REGISTRO DE USUARIO DE FIRESTORE
+// 5. ELIMINAR REGISTRO
 async function deleteUserDoc(uid) {
   if (confirm("¿Estás seguro de eliminar el registro de este usuario?")) {
     try {
@@ -105,7 +107,7 @@ async function deleteUserDoc(uid) {
   }
 }
 
-// 6. GUARDAR NUEVO O EDITAR USUARIO EN FIRESTORE
+// 6. GUARDAR NUEVO O EDITAR USUARIO EN FIRESTORE Y AUTHENTICATION
 async function saveUser(e) {
   e.preventDefault();
   const uid = document.getElementById('userId').value;
@@ -121,10 +123,28 @@ async function saveUser(e) {
   }
 
   try {
-    // Si no tenemos UID, usamos el formato sanitizado del email como ID
-    const targetDocId = uid || email.replace(/[^a-zA-Z0-9]/g, "_");
-    
-    await setDoc(doc(db, "usuarios", targetDocId), {
+    let finalUid = uid;
+
+    // SI ES UN NUEVO USUARIO -> LO CREAMOS EN FIREBASE AUTH SIN CERRAR TU SESIÓN
+    if (!finalUid) {
+      // Generamos una clave temporal fuerte aleatoria
+      const tempPassword = 'Tic' + Math.random().toString(36).substring(2, 10) + '!';
+      
+      // Creamos una app secundaria temporal de Firebase para no desconectar la sesión actual
+      const secondaryApp = initializeApp(auth.app.options, "SecondaryApp_" + Date.now());
+      const secondaryAuth = secondaryApp.options ? auth : auth; // Mantiene el hilo
+      
+      // Creamos la cuenta en Firebase Auth Real
+      const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+      finalUid = userCredential.user.uid;
+
+      // Guardamos la clave provisional para mostrártela en pantalla
+      document.getElementById('createdPass').textContent = tempPassword;
+      document.getElementById('createdEmail').textContent = email;
+    }
+
+    // Guardar los datos en Firestore con el UID real de Authentication
+    await setDoc(doc(db, "usuarios", finalUid), {
       nombre: name,
       email: email,
       rol: role,
@@ -133,9 +153,15 @@ async function saveUser(e) {
 
     closeUserModal();
     loadUsers();
+
+    // Si era nuevo, mostramos el modal con los datos de acceso para copiar
+    if (!uid) {
+      openSuccessModal();
+    }
+
   } catch (error) {
     console.error("Error guardando usuario:", error);
-    alert("Ocurrió un error al guardar los datos.");
+    alert("Error al guardar usuario: " + error.message);
   } finally {
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -144,7 +170,7 @@ async function saveUser(e) {
   }
 }
 
-// 7. FUNCIONES DE MANEJO DEL MODAL
+// MODAL CONTROL
 function openUserModal() {
   const form = document.getElementById('userForm');
   if (form) form.reset();
@@ -153,25 +179,42 @@ function openUserModal() {
   if (userIdInput) userIdInput.value = '';
 
   const modal = document.getElementById('userModal');
-  if (modal) {
-    modal.classList.add('active');
-  }
+  if (modal) modal.classList.add('active');
 }
 
 function closeUserModal() {
   const modal = document.getElementById('userModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
+  if (modal) modal.classList.remove('active');
 }
 
-// Exponer funciones globales para interactuar con los eventos onclick / onsubmit del HTML
+function openSuccessModal() {
+  const modal = document.getElementById('successModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeSuccessModal() {
+  const modal = document.getElementById('successModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function copyCredentials() {
+  const email = document.getElementById('createdEmail').textContent;
+  const pass = document.getElementById('createdPass').textContent;
+  const textToCopy = `Acceso Ticneo Portal:\nUsuario: ${email}\nContraseña provisional: ${pass}`;
+
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    alert("📋 Credenciales copiadas al portapapeles. ¡Ya se las puedes enviar al usuario!");
+  });
+}
+
+// Exponer funciones globales
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
+window.closeSuccessModal = closeSuccessModal;
+window.copyCredentials = copyCredentials;
 window.saveUser = saveUser;
 window.toggleUserStatus = toggleUserStatus;
 window.sendResetPassword = sendResetPassword;
 window.deleteUserDoc = deleteUserDoc;
 
-// Cargar la lista al iniciar la página
 document.addEventListener('DOMContentLoaded', loadUsers);
