@@ -1,48 +1,55 @@
 // app.js - Gestión de Almacén con Firebase Firestore
-import { db, collection, addDoc, getDocs, query, orderBy } from './firebase-config.js';
+import { 
+    collection, 
+    addDoc, 
+    query, 
+    orderBy, 
+    getDocs, 
+    serverTimestamp 
+  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
 // 1. Cargar Datos desde Firestore
 async function loadSheetData() {
-  const tbody = document.getElementById('tableBody');
+    const tableBody = document.getElementById('inventoryTableBody');
+    tableBody.innerHTML = ''; // Limpiar tabla
   
-  try {
-    // Consulta ordenada por fecha descendente
-    const q = query(collection(db, "almacen"), orderBy("fecha", "desc"));
-    const querySnapshot = await getDocs(q);
-
-    currentData = [];
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      // Formatear al esquema matricial de la vista
-      currentData.push([
-        docSnap.id,
-        data.fecha,
-        data.articulo,
-        data.tipoMov,
-        data.cantidad,
-        data.tipoSolicitante,
-        data.detalleSolicitante,
-        data.notas
-      ]);
-    });
-
-    if (currentData.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
-      return;
+    try {
+      // 1. Consulta ordenada por lo más reciente (desc = descendente)
+      const q = query(collection(db, "almacen"), orderBy("creadoEl", "desc"));
+      const querySnapshot = await getDocs(q);
+  
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Formatear la fecha para la tabla (soporta tanto Timestamp de Firebase como texto antiguo)
+        let fechaFormateada = data.fecha;
+        if (data.fecha && data.fecha.toDate) {
+          fechaFormateada = data.fecha.toDate().toISOString().split('T')[0];
+        }
+  
+        // 2. Acortamos el ID de Firebase para que no ocupe tanto espacio
+        const idAcortado = doc.id.substring(0, 6).toUpperCase();
+  
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>#${idAcortado}</td>
+          <td>${fechaFormateada || ''}</td>
+          <td>${data.articulo || ''}</td>
+          <td><span class="badge ${data.tipoMov === 'Entrada' ? 'bg-success' : 'bg-danger'}">${data.tipoMov || ''}</span></td>
+          <td>${data.cantidad || 0}</td>
+          <td>${data.tipoSolicitante || ''}</td>
+          <td>${data.detalleSolicitante || ''}</td>
+          <td>${data.notas || ''}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
     }
-
-    renderCurrentView();
-    updateKPIs(currentData);
-    populateArticleDatalist();
-
-  } catch (error) {
-    console.error("Error al cargar datos desde Firestore:", error);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén.</td></tr>`;
   }
-}
 
 // 2. Calcular el Inventario / Stock por producto
 function calculateInventory(data) {
@@ -262,14 +269,14 @@ async function submitForm(e) {
   btnSubmit.textContent = 'Guardando...';
 
   const newRecord = {
-    fecha: document.getElementById('fecha').value,
+    fecha: new Date(document.getElementById('fecha').value), // Convierte a Date
     articulo: document.getElementById('articulo').value,
     tipoMov: document.getElementById('tipoMov').value,
-    cantidad: parseInt(document.getElementById('cantidad').value, 10) || 0,
+    cantidad: parseInt(document.getElementById('cantidad').value, 10),
     tipoSolicitante: document.getElementById('tipoSolicitante').value,
     detalleSolicitante: document.getElementById('detalleSolicitante').value,
     notas: document.getElementById('notas').value,
-    creadoEl: new Date().toISOString()
+    creadoEl: serverTimestamp() // 👈 Usa la fecha/hora exacta del servidor de Firebase
   };
 
   try {
