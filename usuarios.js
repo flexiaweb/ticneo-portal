@@ -30,17 +30,17 @@ async function loadUsers() {
     renderUsersTable();
   } catch (error) {
     console.error("Error al cargar usuarios:", error);
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: red;">Error al cargar lista de usuarios.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-box" style="color: #f87171;">⚠️ Error al cargar la lista de usuarios.</td></tr>`;
   }
 }
 
-// 2. RENDERIZAR TABLA
+// 2. RENDERIZAR TABLA CON ESTILOS ACTUALIZADOS
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   tbody.innerHTML = '';
 
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay usuarios registrados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-box">No hay usuarios registrados.</td></tr>`;
     return;
   }
 
@@ -52,14 +52,14 @@ function renderUsersTable() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${user.nombre || 'Sin Nombre'}</strong></td>
+      <td><strong style="color: #fff;">${user.nombre || 'Sin Nombre'}</strong></td>
       <td>${user.email || '-'}</td>
       <td><span class="badge-role">${(user.rol || 'usuario').toUpperCase()}</span></td>
       <td>${statusBadge}</td>
-      <td>
-        <button onclick="toggleUserStatus('${user.id}', ${isActivo})" class="btn-sm">${isActivo ? 'Desactivar' : 'Activar'}</button>
-        <button onclick="sendResetPassword('${user.email}')" class="btn-sm" title="Enviar correo de cambio de contraseña">🔑 Clave</button>
-        <button onclick="deleteUserDoc('${user.id}')" class="btn-sm btn-danger">🗑️</button>
+      <td style="text-align: right;">
+        <button onclick="toggleUserStatus('${user.id}', ${isActivo})" class="btn-action">${isActivo ? 'Desactivar' : 'Activar'}</button>
+        <button onclick="sendResetPassword('${user.email}')" class="btn-action" title="Enviar correo de restablecimiento">🔑 Clave</button>
+        <button onclick="deleteUserDoc('${user.id}')" class="btn-action btn-danger" title="Eliminar">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -84,7 +84,7 @@ async function sendResetPassword(email) {
   if (confirm(`¿Enviar un correo a ${email} para que reestablezca su contraseña?`)) {
     try {
       await sendPasswordResetEmail(auth, email);
-      alert(` Correo enviado con éxito a ${email}`);
+      alert(`Correo enviado con éxito a ${email}`);
     } catch (error) {
       console.error("Error enviando reset password:", error);
       alert("Error al enviar el correo de recuperación.");
@@ -114,8 +114,14 @@ async function saveUser(e) {
   const role = document.getElementById('userRole').value;
   const active = document.getElementById('userStatus').value === 'true';
 
+  const btnSubmit = document.getElementById('btnSaveUser');
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Guardando...';
+  }
+
   try {
-    // Si no tenemos UID, generamos un documento en Firestore usando el correo como ID o auto-id
+    // Si no tenemos UID, usamos el formato sanitizado del email como ID
     const targetDocId = uid || email.replace(/[^a-zA-Z0-9]/g, "_");
     
     await setDoc(doc(db, "usuarios", targetDocId), {
@@ -127,26 +133,39 @@ async function saveUser(e) {
 
     closeUserModal();
     loadUsers();
-    alert("Usuario guardado correctamente.");
   } catch (error) {
     console.error("Error guardando usuario:", error);
     alert("Ocurrió un error al guardar los datos.");
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Guardar Usuario';
+    }
   }
 }
 
-// FUNCIONES DE MODAL
+// 7. FUNCIONES DE MANEJO DEL MODAL
 function openUserModal() {
-  document.getElementById('userForm').reset();
-  document.getElementById('userId').value = '';
-  document.getElementById('userModal').classList.add('active'); // O displays
-  document.getElementById('userModal').style.display = 'flex';
+  const form = document.getElementById('userForm');
+  if (form) form.reset();
+  
+  const userIdInput = document.getElementById('userId');
+  if (userIdInput) userIdInput.value = '';
+
+  const modal = document.getElementById('userModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
 }
 
 function closeUserModal() {
-  document.getElementById('userModal').style.display = 'none';
+  const modal = document.getElementById('userModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
 }
 
-// Exponer funciones globales para eventos en HTML
+// Exponer funciones globales para interactuar con los eventos onclick / onsubmit del HTML
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
 window.saveUser = saveUser;
@@ -154,5 +173,5 @@ window.toggleUserStatus = toggleUserStatus;
 window.sendResetPassword = sendResetPassword;
 window.deleteUserDoc = deleteUserDoc;
 
-// Cargar la lista al iniciar
+// Cargar la lista al iniciar la página
 document.addEventListener('DOMContentLoaded', loadUsers);
