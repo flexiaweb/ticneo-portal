@@ -39,7 +39,7 @@
       <button onclick="openUserModal()" class="btn-primary">Nuevo Usuario</button>
     </div>
 
-    <!-- Contenedor Principal de la Tabla con las clases de tu CSS -->
+    <!-- Tabla de Usuarios -->
     <div class="table-container" style="border-radius: 12px; border-top: 1px solid var(--border-color);">
       <table class="data-table">
         <thead>
@@ -68,69 +68,70 @@
         <button type="button" onclick="closeUserModal()" class="btn-close">&times;</button>
       </div>
 
-<form id="userForm" onsubmit="saveUser(event)">
-  <input type="hidden" id="userId">
-  
-  <div class="form-grid">
-    <div class="form-group full-width">
-      <label for="userName">Nombre Completo</label>
-      <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
-    </div>
-  
-    <div class="form-group">
-      <label for="userEmail">Correo Electrónico</label>
-      <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
-    </div>
+      <form id="userForm" onsubmit="saveUser(event)">
+        <input type="hidden" id="userId">
+        
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="userName">Nombre Completo</label>
+            <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
+          </div>
+        
+          <div class="form-group">
+            <label for="userEmail">Correo Electrónico</label>
+            <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
+          </div>
 
-    <!-- Campo de Contraseña adaptado para Reset -->
-    <div class="form-group">
-      <label for="userPassword" id="lblPassword">Contraseña</label>
-      <div style="display: flex; gap: 0.5rem;">
-        <input type="text" id="userPassword" placeholder="Ej. Pass1234!">
-        <button type="button" onclick="resetPasswordGenerator()" class="btn-secondary" style="padding: 0 0.8rem; font-size: 0.8rem;" title="Generar contraseña aleatoria">
-          🎲
-        </button>
-      </div>
-      <small id="passwordHelp" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
-        <!-- Se llena dinámicamente según si creas o editas -->
-      </small>
-    </div>
-  
-    <div class="form-group">
-      <label for="userRole">Rol de Usuario</label>
-      <select id="userRole" required>
-        <option value="usuario">Usuario Estándar</option>
-        <option value="almacen">Gestor de Almacén</option>
-        <option value="admin">Administrador</option>
-      </select>
-    </div>
-  
-    <div class="form-group">
-      <label for="userStatus">Estado</label>
-      <select id="userStatus" required>
-        <option value="true">Activo</option>
-        <option value="false">Inactivo (Bloqueado)</option>
-      </select>
+          <!-- Campo de Contraseña con botón de generación rápida (🎲) -->
+          <div class="form-group">
+            <label for="userPassword" id="lblPassword">Contraseña</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="userPassword" placeholder="Ej. Pass1234!">
+              <button type="button" onclick="resetPasswordGenerator()" class="btn-secondary" style="padding: 0 0.8rem; font-size: 0.8rem;" title="Generar contraseña aleatoria">
+                🎲
+              </button>
+            </div>
+            <small id="passwordHelp" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+              <!-- Se actualiza dinámicamente desde JS -->
+            </small>
+          </div>
+        
+          <div class="form-group">
+            <label for="userRole">Rol de Usuario</label>
+            <select id="userRole" required>
+              <option value="usuario">Usuario Estándar</option>
+              <option value="almacen">Gestor de Almacén</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        
+          <div class="form-group">
+            <label for="userStatus">Estado</label>
+            <select id="userStatus" required>
+              <option value="true">Activo</option>
+              <option value="false">Inactivo (Bloqueado)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div class="modal-footer">
-    <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
-    <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
-  </div>
-</form>
-    </div>
-  </div>
   <!-- Modal de Éxito al Crear Usuario (Para Copiar Accesos) -->
   <div id="successModal" class="modal-overlay">
     <div class="modal-card" style="max-width: 450px; text-align: center;">
       <div class="modal-header">
-        <h3>🎉 ¡Usuario Creado con Éxito!</h3>
+        <h3>🎉 ¡Usuario Registrado!</h3>
         <button type="button" onclick="closeSuccessModal()" class="btn-close">&times;</button>
       </div>
 
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;">
-        El usuario ha sido registrado en Firebase Auth y Firestore. Copia sus datos de acceso para entregárselos:
+        El usuario ha sido registrado en Firestore. Copia sus credenciales de acceso para entregárselas:
       </p>
 
       <div style="background: rgba(12, 9, 20, 0.8); border: 1px dashed var(--primary-light); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
