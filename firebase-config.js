@@ -1,12 +1,6 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
   getFirestore, 
   collection, 
   addDoc, 
@@ -21,7 +15,6 @@ import {
   orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Reemplaza con los valores de tu consola de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyByXU82DSNf1Blmt03m57Hw7gxSQres5Jc",
     authDomain: "ticneo-portal.firebaseapp.com",
@@ -32,14 +25,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Exportar funciones auxiliares de SDKs
+// Exportar funciones de Firestore
 export { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
   collection, 
   addDoc, 
   getDocs, 
