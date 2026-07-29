@@ -68,48 +68,57 @@
         <button type="button" onclick="closeUserModal()" class="btn-close">&times;</button>
       </div>
 
-      <form id="userForm" onsubmit="saveUser(event)">
-        <input type="hidden" id="userId">
-        
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label for="userName">Nombre Completo</label>
-            <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
-          </div>
-        
-          <div class="form-group">
-            <label for="userEmail">Correo Electrónico</label>
-            <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
-          </div>
-        
-          <div class="form-group">
-            <label for="userPassword">Contraseña</label>
-            <input type="text" id="userPassword" placeholder="Dejar en blanco para autogenerar">
-          </div>
-        
-          <div class="form-group">
-            <label for="userRole">Rol de Usuario</label>
-            <select id="userRole" required>
-              <option value="usuario">Usuario Estándar</option>
-              <option value="almacen">Gestor de Almacén</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
-        
-          <div class="form-group">
-            <label for="userStatus">Estado</label>
-            <select id="userStatus" required>
-              <option value="true">Activo</option>
-              <option value="false">Inactivo (Bloqueado)</option>
-            </select>
-          </div>
-        </div>
+<form id="userForm" onsubmit="saveUser(event)">
+  <input type="hidden" id="userId">
+  
+  <div class="form-grid">
+    <div class="form-group full-width">
+      <label for="userName">Nombre Completo</label>
+      <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
+    </div>
+  
+    <div class="form-group">
+      <label for="userEmail">Correo Electrónico</label>
+      <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
+    </div>
 
-        <div class="modal-footer">
-          <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
-          <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
-        </div>
-      </form>
+    <!-- Campo de Contraseña adaptado para Reset -->
+    <div class="form-group">
+      <label for="userPassword" id="lblPassword">Contraseña</label>
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="userPassword" placeholder="Ej. Pass1234!">
+        <button type="button" onclick="resetPasswordGenerator()" class="btn-secondary" style="padding: 0 0.8rem; font-size: 0.8rem;" title="Generar contraseña aleatoria">
+          🎲
+        </button>
+      </div>
+      <small id="passwordHelp" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+        <!-- Se llena dinámicamente según si creas o editas -->
+      </small>
+    </div>
+  
+    <div class="form-group">
+      <label for="userRole">Rol de Usuario</label>
+      <select id="userRole" required>
+        <option value="usuario">Usuario Estándar</option>
+        <option value="almacen">Gestor de Almacén</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+  
+    <div class="form-group">
+      <label for="userStatus">Estado</label>
+      <select id="userStatus" required>
+        <option value="true">Activo</option>
+        <option value="false">Inactivo (Bloqueado)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
+    <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
+  </div>
+</form>
     </div>
   </div>
   <!-- Modal de Éxito al Crear Usuario (Para Copiar Accesos) -->
