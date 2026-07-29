@@ -12,7 +12,7 @@
 </head>
 <body>
 
-  <!-- Encabezado Principal (Idéntico a index.html y almacen.html) -->
+  <!-- Encabezado Principal -->
   <header>
     <a href="index.html" class="brand">
       <div class="brand-icon">T</div>
@@ -34,7 +34,7 @@
 
   <!-- Contenido Principal -->
   <main>
-    <!-- Encabezado de Sección con Botón -->
+    <!-- Cabecera de Sección -->
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <div>
         <h2>Gestión de Usuarios</h2>
@@ -43,72 +43,70 @@
       <button onclick="openUserModal()" class="btn-primary">+ Nuevo Usuario</button>
     </div>
 
-    <!-- Contenedor Principal de la Tabla (Mismo diseño de Almacén) -->
-    <div class="table-container">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Correo Electrónico</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="usersTableBody">
-            <tr>
-              <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                Cargando lista de usuarios...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Tabla con las mismas clases que Almacén -->
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Correo Electrónico</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              Cargando lista de usuarios...
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </main>
 
-  <!-- Modal para Crear / Editar Usuario -->
-  <div id="userModal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="modalTitle">Nuevo Usuario</h3>
-        <button onclick="closeUserModal()" class="btn-icon">&times;</button>
+  <!-- Modal para Crear / Editar Usuario (Usa las clases de modal de Almacén) -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 id="modalTitle" style="margin: 0;">Nuevo Usuario</h3>
+        <button onclick="closeUserModal()" class="btn-secondary" style="padding: 0.2rem 0.6rem; cursor: pointer;">&times;</button>
       </div>
 
       <form id="userForm" onsubmit="saveUser(event)">
         <input type="hidden" id="userId">
         
-        <div class="form-group">
-          <label for="userName">Nombre Completo</label>
-          <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">Nombre Completo</label>
+          <input type="text" id="userName" placeholder="Ej. Juan Pérez" required style="width: 100%; padding: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
         </div>
 
-        <div class="form-group">
-          <label for="userEmail">Correo Electrónico</label>
-          <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">Correo Electrónico</label>
+          <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required style="width: 100%; padding: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
         </div>
 
-        <div class="form-row" style="display: flex; gap: 1rem;">
-          <div class="form-group" style="flex: 1;">
-            <label for="userRole">Rol de Usuario</label>
-            <select id="userRole" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">Rol de Usuario</label>
+            <select id="userRole" required style="width: 100%; padding: 0.6rem; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
               <option value="usuario">Usuario Estándar</option>
               <option value="almacen">Gestor de Almacén</option>
               <option value="admin">Administrador</option>
             </select>
           </div>
 
-          <div class="form-group" style="flex: 1;">
-            <label for="userStatus">Estado</label>
-            <select id="userStatus" required>
+          <div>
+            <label style="display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">Estado</label>
+            <select id="userStatus" required style="width: 100%; padding: 0.6rem; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
               <option value="true">Activo</option>
               <option value="false">Inactivo (Bloqueado)</option>
             </select>
           </div>
         </div>
 
-        <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
           <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
         </div>
