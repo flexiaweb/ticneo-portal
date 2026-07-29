@@ -542,3 +542,40 @@
     border-color: var(--primary-light);
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
   }
+/* Botones de acción pequeña dentro de tablas */
+.btn-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--primary-light);
+}
+
+.btn-action.btn-danger {
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #f87171;
+}
+
+.btn-action.btn-danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* Badge para Roles de Usuario */
+.badge-role {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--primary-light);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
