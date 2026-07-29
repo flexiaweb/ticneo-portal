@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Almacén - Ticneo Portal</title>
+    <title>Ticneo Portal</title>
     <link rel="stylesheet" href="styles.css">
     
     <!-- Carga de módulos de autenticación y lógica principal -->
@@ -38,10 +38,10 @@
       <p>Selecciona el módulo al que deseas acceder:</p>
     </div>
 
-    <!-- Grid con la tarjeta de Almacén -->
+    <!-- Grid con las tarjetas de los módulos -->
     <div class="dashboard-grid">
 
-      <!-- Caja Almacén de Sistemas -->
+      <!-- Caja 1: Almacén de Sistemas -->
       <a href="almacen.html" class="panel-card">
         <div class="card-top">
           <div class="card-icon">📦</div>
@@ -54,6 +54,22 @@
         <div class="card-footer">
           <span>Abrir módulo &rarr;</span>
           <span style="color: var(--text-muted);">Stock Activo</span>
+        </div>
+      </a>
+
+      <!-- Caja 2: Gestión de Usuarios (NUEVO MÓDULO) -->
+      <a href="usuarios.html" class="panel-card">
+        <div class="card-top">
+          <div class="card-icon">👥</div>
+          <span class="card-badge badge-secondary" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">Administración</span>
+        </div>
+        <div>
+          <h3 class="card-title">Gestión de Usuarios</h3>
+          <p class="card-desc">Administración de acceso al portal, creación de cuentas, asignación de roles y control de permisos.</p>
+        </div>
+        <div class="card-footer">
+          <span>Abrir módulo &rarr;</span>
+          <span style="color: var(--text-muted);">Control de Acceso</span>
         </div>
       </a>
 
