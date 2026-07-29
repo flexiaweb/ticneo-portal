@@ -1,42 +1,35 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbwZIHaoo6BO1A57bKmd-N1IlaWHUXd5zaufzvWyuKmpyvwx9b8JH-SrahqGBFUc7AA/exec';
+// app.js - Gestión de Almacén con Firebase Firestore
+import { db, collection, addDoc, getDocs, query, orderBy } from './firebase-config.js';
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
-// Helper para obtener credenciales de la sesión
-function getAuthCredentials() {
-  return {
-    user: sessionStorage.getItem('ticneo_user') || '',
-    pass: sessionStorage.getItem('ticneo_pass') || ''
-  };
-}
-
-// 1. Cargar Datos
+// 1. Cargar Datos desde Firestore
 async function loadSheetData() {
   const tbody = document.getElementById('tableBody');
-  const auth = getAuthCredentials();
   
   try {
-    // Enviamos user y pass por URL para autenticar con Google Apps Script
-    const authParams = `user=${encodeURIComponent(auth.user)}&pass=${encodeURIComponent(auth.pass)}`;
-    const noCacheUrl = `${API_URL}?${authParams}&_nocache=${new Date().getTime()}`;
-    
-    const response = await fetch(noCacheUrl, { cache: 'no-store' });
+    // Consulta ordenada por fecha descendente
+    const q = query(collection(db, "almacen"), orderBy("fecha", "desc"));
+    const querySnapshot = await getDocs(q);
 
-    if (!response.ok) throw new Error("Error en la conexión.");
-    
-    const data = await response.json();
+    currentData = [];
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      // Formatear al esquema matricial de la vista
+      currentData.push([
+        docSnap.id,
+        data.fecha,
+        data.articulo,
+        data.tipoMov,
+        data.cantidad,
+        data.tipoSolicitante,
+        data.detalleSolicitante,
+        data.notas
+      ]);
+    });
 
-    // Si Google responde con error de autorización
-    if (data.error === "Unauthorized") {
-      alert("⚠️ Credenciales incorrectas o sesión expirada.");
-      logout();
-      return;
-    }
-
-    currentData = data;
-
-    if (!Array.isArray(currentData) || currentData.length === 0) {
+    if (currentData.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
       return;
     }
@@ -46,12 +39,12 @@ async function loadSheetData() {
     populateArticleDatalist();
 
   } catch (error) {
-    console.error("Error al cargar datos:", error);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con el servicio de Almacén.</td></tr>`;
+    console.error("Error al cargar datos desde Firestore:", error);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén.</td></tr>`;
   }
 }
 
-// 2. Calcular Inventario
+// 2. Calcular el Inventario / Stock por producto
 function calculateInventory(data) {
   const inventory = {};
 
@@ -76,7 +69,7 @@ function calculateInventory(data) {
   return inventory;
 }
 
-// 3. Poblar Datalist de Artículos
+// 3. Poblar la lista de sugerencias en el formulario
 function populateArticleDatalist() {
   const datalist = document.getElementById('articlesList');
   if (!datalist) return;
@@ -93,9 +86,10 @@ function populateArticleDatalist() {
   });
 }
 
-// 4. Cambiar Vistas
+// 4. Cambiar entre vista Histórico / Inventario
 function setView(view) {
   currentView = view;
+  
   document.getElementById('btnViewHistory').classList.toggle('active', view === 'history');
   document.getElementById('btnViewStock').classList.toggle('active', view === 'stock');
   document.getElementById('typeFilterContainer').style.display = view === 'history' ? 'block' : 'none';
@@ -111,7 +105,7 @@ function renderCurrentView() {
   }
 }
 
-// 5. Tabla Histórico
+// 5. Renderizar vista de HISTORIAL
 function renderHistoryTable(data) {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
@@ -136,7 +130,7 @@ function renderHistoryTable(data) {
   }
 
   data.forEach(row => {
-    const id = row[0] || '-';
+    const id = row[0] ? String(row[0]).substring(0, 6) : '-';
     const fecha = row[1] ? String(row[1]).split('T')[0] : '-';
     const articulo = row[2] || '-';
     const tipoMov = row[3] || 'Entrada';
@@ -163,7 +157,7 @@ function renderHistoryTable(data) {
   });
 }
 
-// 6. Tabla Stock Acumulado
+// 6. Renderizar vista de STOCK ACUMULADO
 function renderStockTable() {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
@@ -209,6 +203,7 @@ function renderStockTable() {
 // 7. KPIs y Filtros
 function updateKPIs(data) {
   document.getElementById('kpiTotal').textContent = data.length;
+  
   let entradas = 0;
   let salidas = 0;
 
@@ -247,7 +242,7 @@ function filterTable() {
   renderHistoryTable(filtered);
 }
 
-// 8. Modales
+// 8. Abrir/Cerrar Modal
 function openModal() {
   document.getElementById('fecha').valueAsDate = new Date();
   populateArticleDatalist();
@@ -259,48 +254,45 @@ function closeModal() {
   document.getElementById('addMovementForm').reset();
 }
 
-// 9. Guardar Registro
+// 9. Guardar Registro en Firestore
 async function submitForm(e) {
   e.preventDefault();
   const btnSubmit = document.getElementById('btnSubmit');
   btnSubmit.disabled = true;
   btnSubmit.textContent = 'Guardando...';
 
-  const auth = getAuthCredentials();
-
-  // Incluimos credenciales en el body del POST
   const newRecord = {
-    user: auth.user,
-    pass: auth.pass,
     fecha: document.getElementById('fecha').value,
     articulo: document.getElementById('articulo').value,
     tipoMov: document.getElementById('tipoMov').value,
-    cantidad: document.getElementById('cantidad').value,
+    cantidad: parseInt(document.getElementById('cantidad').value, 10) || 0,
     tipoSolicitante: document.getElementById('tipoSolicitante').value,
     detalleSolicitante: document.getElementById('detalleSolicitante').value,
-    notas: document.getElementById('notas').value
+    notas: document.getElementById('notas').value,
+    creadoEl: new Date().toISOString()
   };
 
   try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(newRecord)
-    });
+    await addDoc(collection(db, "almacen"), newRecord);
 
     closeModal();
-    setTimeout(async () => {
-      await loadSheetData();
-      btnSubmit.disabled = false;
-      btnSubmit.textContent = 'Guardar Registro';
-    }, 1500);
+    await loadSheetData();
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = 'Guardar Registro';
 
   } catch (err) {
-    console.error("Error guardando:", err);
-    alert("Ocurrió un error al guardar.");
+    console.error("Error guardando en Firestore:", err);
+    alert("Ocurrió un error al guardar el registro.");
     btnSubmit.disabled = false;
     btnSubmit.textContent = 'Guardar Registro';
   }
 }
+
+// Exponer funciones en window para listeners de eventos HTML
+window.setView = setView;
+window.filterTable = filterTable;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.submitForm = submitForm;
 
 window.addEventListener('DOMContentLoaded', loadSheetData);

@@ -1,38 +1,91 @@
-// auth.js - Control de Acceso y Sesión
-
-// Manejar Inicio de Sesión desde login.html
-function handleLogin(e) {
-    e.preventDefault();
-    
-    const userInput = document.getElementById('username').value.trim();
-    const passInput = document.getElementById('password').value;
+// auth.js
+import { 
+    auth, 
+    db, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged, 
+    doc, 
+    getDoc 
+  } from './firebase-config.js';
   
-    // Guardar temporalmente las credenciales en la sesión del navegador
-    sessionStorage.setItem('ticneo_user', userInput);
-    sessionStorage.setItem('ticneo_pass', passInput);
+  // Iniciar sesión contra Firebase Auth
+  export async function loginUser(email, password) {
+    const errorMsg = document.getElementById('errorMsg');
+    if (errorMsg) errorMsg.style.display = 'none';
   
-    // Intentar acceder directamente a la página principal
-    window.location.href = 'index.html';
-  }
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
   
-  // Proteger páginas privadas
-  function checkAuth() {
-    const user = sessionStorage.getItem('ticneo_user');
-    const pass = sessionStorage.getItem('ticneo_pass');
-    const isLoginPage = window.location.pathname.endsWith('login.html');
+      // Obtener información adicional del usuario (Rol y Nombre) desde Firestore
+      const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        sessionStorage.setItem('ticneo_role', userData.rol || 'usuario');
+        sessionStorage.setItem('ticneo_name', userData.nombre || user.email);
+      } else {
+        sessionStorage.setItem('ticneo_role', 'usuario');
+        sessionStorage.setItem('ticneo_name', user.email);
+      }
   
-    if ((!user || !pass) && !isLoginPage) {
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
+    } catch (error) {
+      console.error("Error al autenticar:", error);
+      if (errorMsg) {
+        errorMsg.textContent = "⚠️ Correo o contraseña incorrectos.";
+        errorMsg.style.display = 'block';
+      }
     }
   }
   
-  // Cerrar Sesión
-  function logout() {
-    sessionStorage.clear();
-    window.location.href = 'login.html';
+  // Proteger acceso a páginas privadas
+  export function checkAuth(requiredRole = null) {
+    onAuthStateChanged(auth, async (user) => {
+      const isLoginPage = window.location.pathname.endsWith('login.html');
+  
+      if (!user && !isLoginPage) {
+        window.location.href = 'login.html';
+        return;
+      }
+  
+      if (user && isLoginPage) {
+        window.location.href = 'index.html';
+        return;
+      }
+  
+      if (user && requiredRole) {
+        const userRole = sessionStorage.getItem('ticneo_role');
+        if (userRole !== requiredRole && userRole !== 'admin') {
+          alert("No tienes permisos suficientes para acceder a esta sección.");
+          window.location.href = 'index.html';
+        }
+      }
+    });
   }
   
-  // Verificar autenticación automáticamente
+  // Cerrar Sesión
+  export async function logout() {
+    try {
+      await signOut(auth);
+      sessionStorage.clear();
+      window.location.href = 'login.html';
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  }
+  
+  // Ejecutar verificación en la carga de la página
   if (!window.location.pathname.endsWith('login.html')) {
     checkAuth();
   }
+  
+  // Exponer la función logout globalmente para usar en botones onclick HTML
+  window.logout = logout;
+  window.handleLogin = function(e) {
+    e.preventDefault();
+    const email = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value;
+    loginUser(email, pass);
+  };
