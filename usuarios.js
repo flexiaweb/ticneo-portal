@@ -4,7 +4,6 @@ import {
   collection, 
   getDocs, 
   doc, 
-  setDoc, 
   updateDoc, 
   deleteDoc, 
   addDoc 
@@ -95,7 +94,7 @@ async function saveUser(e) {
   const uid = document.getElementById('userId').value;
   const name = document.getElementById('userName').value.trim();
   const email = document.getElementById('userEmail').value.trim().toLowerCase();
-  const password = document.getElementById('userPassword').value; 
+  const password = document.getElementById('userPassword').value.trim(); 
   const role = document.getElementById('userRole').value;
   const active = document.getElementById('userStatus').value === 'true';
 
@@ -113,23 +112,32 @@ async function saveUser(e) {
       activo: active
     };
 
-    // Si se escribió contraseña, la agregamos
-    if (password) {
-      userData.password = password;
-    }
-
     if (uid) {
-      // Editar usuario existente
-      await updateDoc(doc(db, "usuarios", uid), userData);
-    } else {
-      // Crear usuario nuevo (si no se especifica contraseña, se asigna una por defecto)
-      if (!password) userData.password = "123456";
-      await addDoc(collection(db, "usuarios"), userData);
-    }
+      // --- MODO EDITAR ---
+      // Solo actualizamos la contraseña si se ingresó algo nuevo
+      if (password !== "") {
+        userData.password = password;
+      }
 
-    closeUserModal();
-    loadUsers();
-    alert(uid ? "Usuario actualizado correctamente." : "Usuario creado en Firestore correctamente.");
+      await updateDoc(doc(db, "usuarios", uid), userData);
+      closeUserModal();
+      loadUsers();
+      alert("Usuario actualizado correctamente.");
+
+    } else {
+      // --- MODO CREAR NUEVO ---
+      // Si la contraseña se dejó en blanco, se genera una automática
+      const finalPassword = password !== "" ? password : generateRandomPassword();
+      userData.password = finalPassword;
+
+      await addDoc(collection(db, "usuarios"), userData);
+
+      closeUserModal();
+      loadUsers();
+
+      // Mostrar modal de éxito con las credenciales creadas
+      showSuccessModal(email, finalPassword);
+    }
 
   } catch (error) {
     console.error("Error guardando usuario:", error);
@@ -150,27 +158,60 @@ function editUser(id) {
   document.getElementById('userId').value = user.id;
   document.getElementById('userName').value = user.nombre || '';
   document.getElementById('userEmail').value = user.email || '';
-  document.getElementById('userPassword').value = user.password || '';
   document.getElementById('userRole').value = user.rol || 'usuario';
   document.getElementById('userStatus').value = (user.activo !== false).toString();
 
+  // Dejamos la contraseña en blanco y ajustamos textos explicativos
+  document.getElementById('userPassword').value = '';
+  document.getElementById('userPassword').placeholder = 'Escribe nueva clave para resetear';
+  
+  const lblPassword = document.getElementById('lblPassword');
+  if (lblPassword) lblPassword.textContent = 'Resetear Contraseña';
+
+  const passwordHelp = document.getElementById('passwordHelp');
+  if (passwordHelp) passwordHelp.textContent = '⚠️ Deja en blanco para mantener la contraseña actual.';
+
   const modalTitle = document.getElementById('modalTitle');
   if (modalTitle) modalTitle.textContent = "Editar Usuario";
-  
+
   openUserModal(false);
 }
 
-// MANEJO DE MODALES
+// 7. GENERADOR DE CONTRASEÑA ALEATORIA (Botón 🎲)
+function resetPasswordGenerator() {
+  const pass = generateRandomPassword();
+  document.getElementById('userPassword').value = pass;
+}
+
+function generateRandomPassword() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+  let pass = '';
+  for (let i = 0; i < 10; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pass;
+}
+
+// 8. MANEJO DE MODALES
 function openUserModal(reset = true) {
   if (reset) {
     const form = document.getElementById('userForm');
     if (form) form.reset();
-    
+
     const userId = document.getElementById('userId');
     if (userId) userId.value = '';
-    
+
     const modalTitle = document.getElementById('modalTitle');
     if (modalTitle) modalTitle.textContent = "Nuevo Usuario";
+
+    const lblPassword = document.getElementById('lblPassword');
+    if (lblPassword) lblPassword.textContent = 'Contraseña';
+
+    const userPassword = document.getElementById('userPassword');
+    if (userPassword) userPassword.placeholder = 'Ej. Pass1234!';
+
+    const passwordHelp = document.getElementById('passwordHelp');
+    if (passwordHelp) passwordHelp.textContent = 'Si se deja en blanco, se creará una contraseña automática.';
   }
 
   const modal = document.getElementById('userModal');
@@ -182,12 +223,46 @@ function closeUserModal() {
   if (modal) modal.classList.remove('active');
 }
 
-// Funciones globales para invocarlas desde HTML
+// 9. MODAL DE ÉXITO Y COPIADO DE CREDENCIALES
+function showSuccessModal(email, password) {
+  const emailSpan = document.getElementById('createdEmail');
+  const passSpan = document.getElementById('createdPass');
+
+  if (emailSpan) emailSpan.textContent = email;
+  if (passSpan) passSpan.textContent = password;
+
+  const successModal = document.getElementById('successModal');
+  if (successModal) successModal.classList.add('active');
+}
+
+function closeSuccessModal() {
+  const successModal = document.getElementById('successModal');
+  if (successModal) successModal.classList.remove('active');
+}
+
+function copyCredentials() {
+  const email = document.getElementById('createdEmail')?.textContent || '';
+  const pass = document.getElementById('createdPass')?.textContent || '';
+  const textToCopy = `Credenciales de Acceso Ticneo Portal:\nEmail: ${email}\nContraseña: ${pass}`;
+
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    alert("📋 Credenciales copiadas al portapapeles.");
+  }).catch(err => {
+    console.error("Error al copiar credenciales:", err);
+    alert("No se pudo copiar automáticamente. Por favor selecciónalas manualmente.");
+  });
+}
+
+// Exportar funciones globales para invocarlas desde el HTML
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
 window.saveUser = saveUser;
 window.editUser = editUser;
 window.toggleUserStatus = toggleUserStatus;
 window.deleteUserDoc = deleteUserDoc;
+window.resetPasswordGenerator = resetPasswordGenerator;
+window.closeSuccessModal = closeSuccessModal;
+window.copyCredentials = copyCredentials;
 
+// Inicialización al cargar el documento
 document.addEventListener('DOMContentLoaded', loadUsers);
