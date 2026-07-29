@@ -13,7 +13,7 @@ let currentView = 'history'; // 'history' o 'stock'
 
 // 1. Cargar Datos desde Firestore
 async function loadSheetData() {
-    const tableBody = document.getElementById('inventoryTableBody');
+    const tableBody = document.getElementById('tableBody');
     tableBody.innerHTML = ''; // Limpiar tabla
   
     try {
