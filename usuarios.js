@@ -1,23 +1,18 @@
-// usuarios.js - Módulo de administración de usuarios
-import { db, auth } from './firebase-config.js';
+// usuarios.js - Gestión de usuarios basada 100% en Firestore
+import { db } from './firebase-config.js';
 import { 
   collection, 
   getDocs, 
   doc, 
   setDoc, 
   updateDoc, 
-  deleteDoc 
+  deleteDoc,
+  addDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { 
-  sendPasswordResetEmail,
-  createUserWithEmailAndPassword,
-  getAuth
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
 let usersList = [];
 
-// 1. CARGAR USUARIOS DESDE FIRESTORE
+// 1. CARGAR USUARIOS
 async function loadUsers() {
   const tbody = document.getElementById('usersTableBody');
   if (!tbody) return;
@@ -33,7 +28,7 @@ async function loadUsers() {
     renderUsersTable();
   } catch (error) {
     console.error("Error al cargar usuarios:", error);
-    tbody.innerHTML = `<tr><td colspan="5" class="loading-box" style="color: #f87171;">⚠️ Error al cargar la lista de usuarios.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-box" style="color: #f87171;">⚠️ Error al cargar la lista de usuarios. Checkea las reglas de Firestore.</td></tr>`;
   }
 }
 
@@ -60,8 +55,8 @@ function renderUsersTable() {
       <td><span class="badge-role">${(user.rol || 'usuario').toUpperCase()}</span></td>
       <td>${statusBadge}</td>
       <td style="text-align: right;">
+        <button onclick="editUser('${user.id}')" class="btn-action" title="Editar">✏️ Editar</button>
         <button onclick="toggleUserStatus('${user.id}', ${isActivo})" class="btn-action">${isActivo ? 'Desactivar' : 'Activar'}</button>
-        <button onclick="sendResetPassword('${user.email}')" class="btn-action" title="Enviar correo de restablecimiento">🔑 Clave</button>
         <button onclick="deleteUserDoc('${user.id}')" class="btn-action btn-danger" title="Eliminar">🗑️</button>
       </td>
     `;
@@ -69,7 +64,7 @@ function renderUsersTable() {
   });
 }
 
-// 3. ACTIVAR / DESACTIVAR USUARIO
+// 3. CAMBIAR ESTADO (ACTIVAR / DESACTIVAR)
 async function toggleUserStatus(uid, currentStatus) {
   try {
     const userRef = doc(db, "usuarios", uid);
@@ -81,23 +76,9 @@ async function toggleUserStatus(uid, currentStatus) {
   }
 }
 
-// 4. RESTABLECER CONTRASEÑA
-async function sendResetPassword(email) {
-  if (!email) return alert("El usuario no tiene un correo válido.");
-  if (confirm(`¿Enviar petición de restablecimiento a ${email}?`)) {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      alert(`Correo de restablecimiento enviado a ${email}`);
-    } catch (error) {
-      console.error("Error enviando reset password:", error);
-      alert("Error al enviar el restablecimiento.");
-    }
-  }
-}
-
-// 5. ELIMINAR REGISTRO
+// 4. ELIMINAR USUARIO
 async function deleteUserDoc(uid) {
-  if (confirm("¿Estás seguro de eliminar el registro de este usuario?")) {
+  if (confirm("¿Estás seguro de eliminar este usuario?")) {
     try {
       await deleteDoc(doc(db, "usuarios", uid));
       loadUsers();
@@ -108,12 +89,13 @@ async function deleteUserDoc(uid) {
   }
 }
 
-// 6. GUARDAR USUARIO (Mantiene sesión de Admin intacta)
+// 5. GUARDAR / EDITAR USUARIO EN FIRESTORE
 async function saveUser(e) {
   e.preventDefault();
   const uid = document.getElementById('userId').value;
   const name = document.getElementById('userName').value.trim();
   const email = document.getElementById('userEmail').value.trim().toLowerCase();
+  const password = document.getElementById('userPassword').value; // Nueva contraseña si aplica
   const role = document.getElementById('userRole').value;
   const active = document.getElementById('userStatus').value === 'true';
 
@@ -124,39 +106,30 @@ async function saveUser(e) {
   }
 
   try {
-    let finalUid = uid;
-
-    // SI ES UN NUEVO USUARIO
-    if (!finalUid) {
-      const tempPassword = 'Tic' + Math.random().toString(36).substring(2, 10) + '!';
-      
-      // Crear instancia aislada de Firebase para no perder la sesión de Admin
-      const secondaryApp = initializeApp(auth.app.options, "SecondaryApp_" + Date.now());
-      const secondaryAuth = getAuth(secondaryApp);
-      
-      // Crear la cuenta en la sesión aislada
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
-      finalUid = userCredential.user.uid;
-
-      // Cargar credenciales en el modal final
-      document.getElementById('createdPass').textContent = tempPassword;
-      document.getElementById('createdEmail').textContent = email;
-    }
-
-    // Guardar en Firestore con la sesión principal (ADMIN)
-    await setDoc(doc(db, "usuarios", finalUid), {
+    const userData = {
       nombre: name,
       email: email,
       rol: role,
       activo: active
-    }, { merge: true });
+    };
+
+    // Si se escribió contraseña, la actualizamos
+    if (password) {
+      userData.password = password;
+    }
+
+    if (uid) {
+      // Editar usuario existente
+      await updateDoc(doc(db, "usuarios", uid), userData);
+    } else {
+      // Crear usuario nuevo (si no puso clave, asignamos una por defecto)
+      if (!password) userData.password = "123456";
+      await addDoc(collection(db, "usuarios"), userData);
+    }
 
     closeUserModal();
     loadUsers();
-
-    if (!uid) {
-      openSuccessModal();
-    }
+    alert(uid ? "Usuario actualizado correctamente." : "Usuario creado en Firestore correctamente.");
 
   } catch (error) {
     console.error("Error guardando usuario:", error);
@@ -169,13 +142,30 @@ async function saveUser(e) {
   }
 }
 
-// MODALES
-function openUserModal() {
-  const form = document.getElementById('userForm');
-  if (form) form.reset();
-  
-  const userIdInput = document.getElementById('userId');
-  if (userIdInput) userIdInput.value = '';
+// 6. EDITAR USUARIO EN EL MODAL
+function editUser(id) {
+  const user = usersList.find(u => u.id === id);
+  if (!user) return;
+
+  document.getElementById('userId').value = user.id;
+  document.getElementById('userName').value = user.nombre || '';
+  document.getElementById('userEmail').value = user.email || '';
+  document.getElementById('userPassword').value = user.password || '';
+  document.getElementById('userRole').value = user.rol || 'usuario';
+  document.getElementById('userStatus').value = (user.activo !== false).toString();
+
+  document.getElementById('modalTitle').textContent = "Editar Usuario";
+  openUserModal(false);
+}
+
+// MANEJO DE MODALES
+function openUserModal(reset = true) {
+  if (reset) {
+    const form = document.getElementById('userForm');
+    if (form) form.reset();
+    document.getElementById('userId').value = '';
+    document.getElementById('modalTitle').textContent = "Nuevo Usuario";
+  }
 
   const modal = document.getElementById('userModal');
   if (modal) modal.classList.add('active');
@@ -186,34 +176,12 @@ function closeUserModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function openSuccessModal() {
-  const modal = document.getElementById('successModal');
-  if (modal) modal.classList.add('active');
-}
-
-function closeSuccessModal() {
-  const modal = document.getElementById('successModal');
-  if (modal) modal.classList.remove('active');
-}
-
-function copyCredentials() {
-  const email = document.getElementById('createdEmail').textContent;
-  const pass = document.getElementById('createdPass').textContent;
-  const textToCopy = `Acceso Ticneo Portal:\nUsuario: ${email}\nContraseña provisional: ${pass}`;
-
-  navigator.clipboard.writeText(textToCopy).then(() => {
-    alert("📋 Credenciales copiadas al portapapeles. ¡Ya se las puedes enviar al usuario!");
-  });
-}
-
-// Exponer funciones globales
+// Funciones globales
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
-window.closeSuccessModal = closeSuccessModal;
-window.copyCredentials = copyCredentials;
 window.saveUser = saveUser;
+window.editUser = editUser;
 window.toggleUserStatus = toggleUserStatus;
-window.sendResetPassword = sendResetPassword;
 window.deleteUserDoc = deleteUserDoc;
 
 document.addEventListener('DOMContentLoaded', loadUsers);
