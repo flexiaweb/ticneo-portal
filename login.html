@@ -67,7 +67,7 @@
         <input type="password" id="password" placeholder="••••••••" required>
       </div>
 
-      <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
+      <button type="submit" id="btnLogin" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
         Iniciar Sesión
       </button>
 
@@ -77,5 +77,37 @@
 
   <!-- Cargar Auth módulo JS -->
   <script type="module" src="auth.js"></script>
+
+  <!-- Función manejadora del Login -->
+  <script>
+    async function handleLogin(e) {
+      e.preventDefault(); // Evita que la página se recargue
+
+      const email = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const btnLogin = document.getElementById('btnLogin');
+
+      if (errorMsg) errorMsg.style.display = 'none';
+      if (btnLogin) {
+        btnLogin.disabled = true;
+        btnLogin.textContent = 'Iniciando...';
+      }
+
+      try {
+        await window.loginUser(email, pass);
+      } catch (err) {
+        if (errorMsg) {
+          errorMsg.textContent = "⚠️ " + (err.message || "Error de credenciales.");
+          errorMsg.style.display = 'block';
+        }
+      } finally {
+        if (btnLogin) {
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'Iniciar Sesión';
+        }
+      }
+    }
+  </script>
 </body>
 </html>
