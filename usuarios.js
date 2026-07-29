@@ -138,11 +138,12 @@ async function saveUser(e) {
 function openUserModal() {
   document.getElementById('userForm').reset();
   document.getElementById('userId').value = '';
-  document.getElementById('userModal').classList.add('active');
+  document.getElementById('userModal').classList.add('active'); // O displays
+  document.getElementById('userModal').style.display = 'flex';
 }
 
 function closeUserModal() {
-  document.getElementById('userModal').classList.remove('active');
+  document.getElementById('userModal').style.display = 'none';
 }
 
 // Exponer funciones globales para eventos en HTML
