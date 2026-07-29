@@ -1,14 +1,14 @@
 // usuarios.js - Gestión de usuarios basada 100% en Firestore
-import { db } from './firebase-config.js';
 import { 
+  db, 
   collection, 
   getDocs, 
   doc, 
   setDoc, 
   updateDoc, 
-  deleteDoc,
+  deleteDoc, 
   addDoc 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from './firebase-config.js';
 
 let usersList = [];
 
@@ -28,7 +28,7 @@ async function loadUsers() {
     renderUsersTable();
   } catch (error) {
     console.error("Error al cargar usuarios:", error);
-    tbody.innerHTML = `<tr><td colspan="5" class="loading-box" style="color: #f87171;">⚠️ Error al cargar la lista de usuarios. Checkea las reglas de Firestore.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-box" style="color: #f87171;">⚠️ Error al cargar la lista de usuarios. Revisa las reglas de Firestore.</td></tr>`;
   }
 }
 
@@ -95,7 +95,7 @@ async function saveUser(e) {
   const uid = document.getElementById('userId').value;
   const name = document.getElementById('userName').value.trim();
   const email = document.getElementById('userEmail').value.trim().toLowerCase();
-  const password = document.getElementById('userPassword').value; // Nueva contraseña si aplica
+  const password = document.getElementById('userPassword').value; 
   const role = document.getElementById('userRole').value;
   const active = document.getElementById('userStatus').value === 'true';
 
@@ -113,7 +113,7 @@ async function saveUser(e) {
       activo: active
     };
 
-    // Si se escribió contraseña, la actualizamos
+    // Si se escribió contraseña, la agregamos
     if (password) {
       userData.password = password;
     }
@@ -122,7 +122,7 @@ async function saveUser(e) {
       // Editar usuario existente
       await updateDoc(doc(db, "usuarios", uid), userData);
     } else {
-      // Crear usuario nuevo (si no puso clave, asignamos una por defecto)
+      // Crear usuario nuevo (si no se especifica contraseña, se asigna una por defecto)
       if (!password) userData.password = "123456";
       await addDoc(collection(db, "usuarios"), userData);
     }
@@ -154,7 +154,9 @@ function editUser(id) {
   document.getElementById('userRole').value = user.rol || 'usuario';
   document.getElementById('userStatus').value = (user.activo !== false).toString();
 
-  document.getElementById('modalTitle').textContent = "Editar Usuario";
+  const modalTitle = document.getElementById('modalTitle');
+  if (modalTitle) modalTitle.textContent = "Editar Usuario";
+  
   openUserModal(false);
 }
 
@@ -163,8 +165,12 @@ function openUserModal(reset = true) {
   if (reset) {
     const form = document.getElementById('userForm');
     if (form) form.reset();
-    document.getElementById('userId').value = '';
-    document.getElementById('modalTitle').textContent = "Nuevo Usuario";
+    
+    const userId = document.getElementById('userId');
+    if (userId) userId.value = '';
+    
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = "Nuevo Usuario";
   }
 
   const modal = document.getElementById('userModal');
@@ -176,7 +182,7 @@ function closeUserModal() {
   if (modal) modal.classList.remove('active');
 }
 
-// Funciones globales
+// Funciones globales para invocarlas desde HTML
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
 window.saveUser = saveUser;
