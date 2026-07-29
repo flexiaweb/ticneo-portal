@@ -10,7 +10,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
   sendPasswordResetEmail,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  getAuth
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
@@ -107,7 +108,7 @@ async function deleteUserDoc(uid) {
   }
 }
 
-// 6. GUARDAR NUEVO O EDITAR USUARIO EN FIRESTORE Y AUTHENTICATION
+// 6. GUARDAR USUARIO (Mantiene sesión de Admin intacta)
 async function saveUser(e) {
   e.preventDefault();
   const uid = document.getElementById('userId').value;
@@ -125,25 +126,24 @@ async function saveUser(e) {
   try {
     let finalUid = uid;
 
-    // SI ES UN NUEVO USUARIO -> LO CREAMOS EN FIREBASE AUTH SIN CERRAR TU SESIÓN
+    // SI ES UN NUEVO USUARIO
     if (!finalUid) {
-      // Generamos una clave temporal fuerte aleatoria
       const tempPassword = 'Tic' + Math.random().toString(36).substring(2, 10) + '!';
       
-      // Creamos una app secundaria temporal de Firebase para no desconectar la sesión actual
+      // Crear instancia aislada de Firebase para no perder la sesión de Admin
       const secondaryApp = initializeApp(auth.app.options, "SecondaryApp_" + Date.now());
-      const secondaryAuth = secondaryApp.options ? auth : auth; // Mantiene el hilo
+      const secondaryAuth = getAuth(secondaryApp);
       
-      // Creamos la cuenta en Firebase Auth Real
-      const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+      // Crear la cuenta en la sesión aislada
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
       finalUid = userCredential.user.uid;
 
-      // Guardamos la clave provisional para mostrártela en pantalla
+      // Cargar credenciales en el modal final
       document.getElementById('createdPass').textContent = tempPassword;
       document.getElementById('createdEmail').textContent = email;
     }
 
-    // Guardar los datos en Firestore con el UID real de Authentication
+    // Guardar en Firestore con la sesión principal (ADMIN)
     await setDoc(doc(db, "usuarios", finalUid), {
       nombre: name,
       email: email,
@@ -154,7 +154,6 @@ async function saveUser(e) {
     closeUserModal();
     loadUsers();
 
-    // Si era nuevo, mostramos el modal con los datos de acceso para copiar
     if (!uid) {
       openSuccessModal();
     }
@@ -170,7 +169,7 @@ async function saveUser(e) {
   }
 }
 
-// MODAL CONTROL
+// MODALES
 function openUserModal() {
   const form = document.getElementById('userForm');
   if (form) form.reset();
