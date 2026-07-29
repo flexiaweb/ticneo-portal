@@ -295,4 +295,14 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.submitForm = submitForm;
 
-window.addEventListener('DOMContentLoaded', loadSheetData);
+import { auth, onAuthStateChanged } from './firebase-config.js';
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Solo cuando Firebase confirma que el usuario está autenticado, carga los datos
+    loadSheetData();
+  } else {
+    // Si no hay usuario activo, redirige a login
+    window.location.href = 'login.html';
+  }
+});
