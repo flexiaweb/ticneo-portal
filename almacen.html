@@ -5,13 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Almacén - Ticneo Portal</title>
         <link rel="stylesheet" href="styles.css">
-        
         <!-- Carga de módulos de autenticación y lógica principal -->
         <script type="module" src="auth.js"></script>
         <script type="module" src="app.js"></script>
       </head>
 <body>
-  <!-- Encabezado Principal -->
   <header>
     <a href="index.html" class="brand">
       <div class="brand-icon">T</div>
@@ -24,11 +22,10 @@
         🚪 Salir
     </button>
   </header>
-
-  <!-- Contenido Principal -->
+    
   <main>
     <a href="index.html" class="btn-back">&larr; Volver al Portal Principal</a>
-
+      
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h2>Almacén de Sistemas</h2>
@@ -40,7 +37,6 @@
       </div>
     </div>
 
-    <!-- Tarjetas KPI Resumen -->
     <div class="kpi-grid">
       <div class="kpi-card">
         <span class="kpi-title">Total Registros</span>
@@ -56,7 +52,6 @@
       </div>
     </div>
 
-    <!-- Controles (Con pestañas de Vista) -->
     <div class="table-controls" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
       <div style="display: flex; gap: 0.5rem;">
         <button id="btnViewHistory" class="btn-view active" onclick="setView('history')">📜 Histórico</button>
@@ -79,11 +74,9 @@
       </div>
     </div>
 
-    <!-- Contenedor de Tabla -->
     <div class="table-container">
       <table class="data-table">
         <thead id="tableHeader">
-          <!-- Dinámico mediante JS -->
         </thead>
         <tbody id="tableBody">
           <tr>
@@ -92,10 +85,8 @@
         </tbody>
       </table>
     </div>
-
   </main>
 
-  <!-- Modal / Formulario Flotante -->
   <div id="movementModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -109,12 +100,11 @@
             <input type="date" id="fecha" required>
           </div>
 
-          <!-- Input con Autocompletado Datalist -->
+          
           <div class="form-group">
             <label for="articulo">Artículo / Insumo</label>
             <input type="text" id="articulo" list="articlesList" placeholder="Escribe o selecciona..." autocomplete="off" required>
             <datalist id="articlesList">
-              <!-- Se autocompleta con JavaScript -->
             </datalist>
           </div>
 
