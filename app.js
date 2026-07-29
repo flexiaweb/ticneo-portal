@@ -1,5 +1,3 @@
-// app.js - Gestión de Almacén con Firebase Firestore
-
 // 1. IMPORTACIONES CENTRALIZADAS DESDE TU CONFIGURACIÓN LOCAL
 import { 
   db, 
