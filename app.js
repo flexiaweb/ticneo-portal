@@ -1,12 +1,15 @@
-// app.js - Gestión de Almacén con Firebase Firestore
+// ✅ Agrega 'db' a la importación de firebase-config.js
+import { db, auth } from './firebase-config.js';
+
+// Las demás funciones de la librería de Firestore
 import { 
-    collection, 
-    addDoc, 
-    query, 
-    orderBy, 
-    getDocs, 
-    serverTimestamp 
-  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  getDocs, 
+  serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
