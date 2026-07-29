@@ -22,13 +22,22 @@ export async function loginUser(email, password) {
     const userDoc = await getDoc(doc(db, "usuarios", user.uid));
     
     if (userDoc.exists()) {
-      const userData = userDoc.data();
-      sessionStorage.setItem('ticneo_role', userData.rol || 'usuario');
-      sessionStorage.setItem('ticneo_name', userData.nombre || user.email);
-    } else {
-      sessionStorage.setItem('ticneo_role', 'usuario');
-      sessionStorage.setItem('ticneo_name', user.email);
-    }
+    const userData = userDoc.data();
+    
+    // 1. VALIDAR SI EL USUARIO ESTÁ INACTIVO/BLOQUEADO
+    if (userData.activo === false) {
+      await signOut(auth); // Desloguear
+      if (errorMsg) {
+        errorMsg.textContent = "⚠️ Tu cuenta está desactivada. Contacta con el administrador.";
+        errorMsg.style.display = 'block';
+      }
+      return;
+  }
+
+  // 2. GUARDAR ROL Y NOMBRE EN SESSION
+  sessionStorage.setItem('ticneo_role', userData.rol || 'usuario');
+  sessionStorage.setItem('ticneo_name', userData.nombre || user.email);
+}
 
     window.location.href = 'index.html';
   } catch (error) {
