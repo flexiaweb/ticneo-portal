@@ -13,8 +13,16 @@ let currentView = 'history'; // 'history' o 'stock'
 
 // 1. Cargar Datos desde Firestore
 async function loadSheetData() {
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = ''; // Limpiar tabla
+  // Buscamos el elemento de la tabla
+  const tbody = document.getElementById('tableBody');
+  
+  // Si por alguna razón no lo encuentra, evitamos que la aplicación rompa
+  if (!tbody) {
+    console.warn("⚠️ No se encontró el elemento con id='tableBody' en la página actual.");
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem;">Cargando datos...</td></tr>`;
   
     try {
       // 1. Consulta ordenada por lo más reciente (desc = descendente)
