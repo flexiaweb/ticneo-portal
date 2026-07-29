@@ -58,14 +58,16 @@ export async function loginUser(email, password) {
 }
 
 // 2. Proteger acceso a páginas privadas
+// auth.js
+
 export function checkAuth(requiredRole = null) {
   onAuthStateChanged(auth, async (user) => {
     const path = window.location.pathname;
     const isLoginPage = path.endsWith('login.html');
+    const loader = document.getElementById('appLoader');
 
     // CASO A: No está logueado y pretende entrar a una página privada
     if (!user && !isLoginPage) {
-      document.body.style.display = 'none'; // Evita mostrar la interfaz
       window.location.replace('login.html');
       return;
     }
@@ -76,7 +78,7 @@ export function checkAuth(requiredRole = null) {
       return;
     }
 
-    // CASO C: Usuario con permisos suficientes en página privada
+    // CASO C: Usuario autenticado en página privada
     if (user && !isLoginPage) {
       if (requiredRole) {
         const userRole = sessionStorage.getItem('ticneo_role');
@@ -86,8 +88,11 @@ export function checkAuth(requiredRole = null) {
           return;
         }
       }
-      // Si todo es correcto, hacemos visible la página
-      document.body.style.opacity = '1';
+
+      // Ocultar el Spinner con efecto de desvanecimiento
+      if (loader) {
+        loader.classList.add('hidden');
+      }
     }
   });
 }
