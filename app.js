@@ -1,16 +1,15 @@
 // app.js - Gestión de Almacén con Firebase Firestore
 
-// 1. TODAS LAS IMPORTACIONES EN UN SOLO LUGAR AL INICIO DEL ARCHIVO
-import { auth, db } from './firebase-config.js';
+// 1. IMPORTACIONES CENTRALIZADAS DESDE TU CONFIGURACIÓN LOCAL
 import { 
+  db, 
   collection, 
   addDoc, 
   getDocs, 
   query, 
   orderBy, 
   serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from './firebase-config.js';
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
@@ -60,7 +59,7 @@ async function loadSheetData() {
 
   } catch (error) {
     console.error("Error al cargar datos desde Firestore:", error);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén. Checkea consola o reglas de Firestore.</td></tr>`;
   }
 }
 
@@ -128,7 +127,6 @@ function renderHistoryTable(data) {
   const tbody = document.getElementById('tableBody');
   if (!thead || !tbody) return;
 
-  // 1. Quitamos <th>ID</th> de los encabezados (ahora son 7 columnas)
   thead.innerHTML = `
     <tr>
       <th>Fecha</th>
@@ -148,7 +146,6 @@ function renderHistoryTable(data) {
   }
 
   data.forEach(row => {
-    // Ya no usamos row[0] (que era el ID), empezamos a leer desde la Fecha row[1]
     const fecha = row[1] || '-';
     const articulo = row[2] || '-';
     const tipoMov = row[3] || 'Entrada';
@@ -160,7 +157,6 @@ function renderHistoryTable(data) {
     const isEntrada = String(tipoMov).toLowerCase().includes('entrada');
     const badgeClass = isEntrada ? 'badge-entrada' : 'badge-salida';
 
-    // 2. Eliminamos la celda del ID (<td>#${idAcortado}</td>)
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${fecha}</td>
@@ -296,7 +292,7 @@ async function submitForm(e) {
     tipoSolicitante: document.getElementById('tipoSolicitante').value,
     detalleSolicitante: document.getElementById('detalleSolicitante').value,
     notas: document.getElementById('notas').value,
-    creadoEl: serverTimestamp() // Guardado con Timestamp oficial
+    creadoEl: serverTimestamp()
   };
 
   try {
@@ -312,18 +308,14 @@ async function submitForm(e) {
   }
 }
 
-// Exponer funciones necesarias en la ventana global
+// Exponer funciones necesarias globalmente
 window.setView = setView;
 window.filterTable = filterTable;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.submitForm = submitForm;
 
-// 5. LISTENER ÚNICO PARA ESPERAR LA SESIÓN DE FIREBASE
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadSheetData();
-  } else {
-    window.location.href = 'login.html';
-  }
+// 5. INICIALIZACIÓN DIRECTA (Sin depender de Firebase Auth)
+document.addEventListener('DOMContentLoaded', () => {
+  loadSheetData();
 });
