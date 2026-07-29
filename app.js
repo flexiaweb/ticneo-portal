@@ -1,71 +1,72 @@
-// ✅ Agrega 'db' a la importación de firebase-config.js
-import { db, auth } from './firebase-config.js';
+// app.js - Gestión de Almacén con Firebase Firestore
 
-// Las demás funciones de la librería de Firestore
+// 1. TODAS LAS IMPORTACIONES EN UN SOLO LUGAR AL INICIO DEL ARCHIVO
+import { auth, db } from './firebase-config.js';
 import { 
   collection, 
   addDoc, 
+  getDocs, 
   query, 
   orderBy, 
-  getDocs, 
   serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
-// 1. Cargar Datos desde Firestore
+// 2. CARGAR DATOS DESDE FIRESTORE
 async function loadSheetData() {
-  // Buscamos el elemento de la tabla
   const tbody = document.getElementById('tableBody');
-  
-  // Si por alguna razón no lo encuentra, evitamos que la aplicación rompa
-  if (!tbody) {
-    console.warn("⚠️ No se encontró el elemento con id='tableBody' en la página actual.");
-    return;
-  }
+  if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem;">Cargando datos...</td></tr>`;
-  
-    try {
-      // 1. Consulta ordenada por lo más reciente (desc = descendente)
-      const q = query(collection(db, "almacen"), orderBy("creadoEl", "desc"));
-      const querySnapshot = await getDocs(q);
-  
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        
-        // Formatear la fecha para la tabla (soporta tanto Timestamp de Firebase como texto antiguo)
-        let fechaFormateada = data.fecha;
-        if (data.fecha && data.fecha.toDate) {
-          fechaFormateada = data.fecha.toDate().toISOString().split('T')[0];
-        }
-  
-        // 2. Acortamos el ID de Firebase para que no ocupe tanto espacio
-        const idAcortado = doc.id.substring(0, 6).toUpperCase();
-  
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>#${idAcortado}</td>
-          <td>${fechaFormateada || ''}</td>
-          <td>${data.articulo || ''}</td>
-          <td><span class="badge ${data.tipoMov === 'Entrada' ? 'bg-success' : 'bg-danger'}">${data.tipoMov || ''}</span></td>
-          <td>${data.cantidad || 0}</td>
-          <td>${data.tipoSolicitante || ''}</td>
-          <td>${data.detalleSolicitante || ''}</td>
-          <td>${data.notas || ''}</td>
-        `;
-        tableBody.appendChild(row);
-      });
-    } catch (error) {
-      console.error("Error al cargar datos:", error);
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">Cargando datos del almacén...</td></tr>`;
+
+  try {
+    // Consulta ordenada por lo más reciente
+    const q = query(collection(db, "almacen"), orderBy("creadoEl", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    currentData = [];
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+
+      // Formatear la fecha (Soporta Timestamp de Firebase y texto plano)
+      let fechaFormateada = data.fecha;
+      if (data.fecha && typeof data.fecha.toDate === 'function') {
+        fechaFormateada = data.fecha.toDate().toISOString().split('T')[0];
+      }
+
+      currentData.push([
+        docSnap.id,
+        fechaFormateada || '-',
+        data.articulo || '-',
+        data.tipoMov || 'Entrada',
+        data.cantidad || 0,
+        data.tipoSolicitante || '-',
+        data.detalleSolicitante || '-',
+        data.notas || '-'
+      ]);
+    });
+
+    if (currentData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
+      return;
     }
-  }
 
-// 2. Calcular el Inventario / Stock por producto
+    renderCurrentView();
+    updateKPIs(currentData);
+    populateArticleDatalist();
+
+  } catch (error) {
+    console.error("Error al cargar datos desde Firestore:", error);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén.</td></tr>`;
+  }
+}
+
+// 3. INVENTARIO Y BÚSQUEDA
 function calculateInventory(data) {
   const inventory = {};
-
   data.forEach(row => {
     const articulo = row[2] ? String(row[2]).trim() : 'Sin Nombre';
     const tipoMov = row[3] ? String(row[3]).toLowerCase() : '';
@@ -83,15 +84,12 @@ function calculateInventory(data) {
       inventory[articulo].stock -= cantidad;
     }
   });
-
   return inventory;
 }
 
-// 3. Poblar la lista de sugerencias en el formulario
 function populateArticleDatalist() {
   const datalist = document.getElementById('articlesList');
   if (!datalist) return;
-
   datalist.innerHTML = '';
   const inventory = calculateInventory(currentData);
 
@@ -104,13 +102,15 @@ function populateArticleDatalist() {
   });
 }
 
-// 4. Cambiar entre vista Histórico / Inventario
 function setView(view) {
   currentView = view;
-  
-  document.getElementById('btnViewHistory').classList.toggle('active', view === 'history');
-  document.getElementById('btnViewStock').classList.toggle('active', view === 'stock');
-  document.getElementById('typeFilterContainer').style.display = view === 'history' ? 'block' : 'none';
+  const btnHist = document.getElementById('btnViewHistory');
+  const btnStock = document.getElementById('btnViewStock');
+  const filterCont = document.getElementById('typeFilterContainer');
+
+  if (btnHist) btnHist.classList.toggle('active', view === 'history');
+  if (btnStock) btnStock.classList.toggle('active', view === 'stock');
+  if (filterCont) filterCont.style.display = view === 'history' ? 'block' : 'none';
 
   renderCurrentView();
 }
@@ -123,11 +123,11 @@ function renderCurrentView() {
   }
 }
 
-// 5. Renderizar vista de HISTORIAL
 function renderHistoryTable(data) {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
-  
+  if (!thead || !tbody) return;
+
   thead.innerHTML = `
     <tr>
       <th>ID</th>
@@ -148,8 +148,8 @@ function renderHistoryTable(data) {
   }
 
   data.forEach(row => {
-    const id = row[0] ? String(row[0]).substring(0, 6) : '-';
-    const fecha = row[1] ? String(row[1]).split('T')[0] : '-';
+    const idAcortado = row[0] ? String(row[0]).substring(0, 6).toUpperCase() : '-';
+    const fecha = row[1] || '-';
     const articulo = row[2] || '-';
     const tipoMov = row[3] || 'Entrada';
     const cantidad = row[4] || '0';
@@ -162,7 +162,7 @@ function renderHistoryTable(data) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>#${id}</strong></td>
+      <td><strong>#${idAcortado}</strong></td>
       <td>${fecha}</td>
       <td style="color:#fff; font-weight: 500;">${articulo}</td>
       <td><span class="badge-mov ${badgeClass}">${tipoMov}</span></td>
@@ -175,11 +175,13 @@ function renderHistoryTable(data) {
   });
 }
 
-// 6. Renderizar vista de STOCK ACUMULADO
 function renderStockTable() {
   const thead = document.getElementById('tableHeader');
   const tbody = document.getElementById('tableBody');
-  const searchValue = document.getElementById('searchInput').value.toLowerCase();
+  const searchInput = document.getElementById('searchInput');
+  const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+
+  if (!thead || !tbody) return;
 
   thead.innerHTML = `
     <tr>
@@ -192,7 +194,6 @@ function renderStockTable() {
 
   tbody.innerHTML = '';
   const inventory = calculateInventory(currentData);
-
   const filteredItems = Object.keys(inventory).filter(item => item.toLowerCase().includes(searchValue));
 
   if (filteredItems.length === 0) {
@@ -218,9 +219,12 @@ function renderStockTable() {
   });
 }
 
-// 7. KPIs y Filtros
 function updateKPIs(data) {
-  document.getElementById('kpiTotal').textContent = data.length;
+  const kpiTotal = document.getElementById('kpiTotal');
+  const kpiEntradas = document.getElementById('kpiEntradas');
+  const kpiSalidas = document.getElementById('kpiSalidas');
+
+  if (kpiTotal) kpiTotal.textContent = data.length;
   
   let entradas = 0;
   let salidas = 0;
@@ -233,8 +237,8 @@ function updateKPIs(data) {
     else if (tipo.includes('salida')) salidas += qty;
   });
 
-  document.getElementById('kpiEntradas').textContent = '+' + entradas;
-  document.getElementById('kpiSalidas').textContent = '-' + salidas;
+  if (kpiEntradas) kpiEntradas.textContent = '+' + entradas;
+  if (kpiSalidas) kpiSalidas.textContent = '-' + salidas;
 }
 
 function filterTable() {
@@ -243,8 +247,11 @@ function filterTable() {
     return;
   }
 
-  const searchValue = document.getElementById('searchInput').value.toLowerCase();
-  const typeValue = document.getElementById('typeFilter').value;
+  const searchInput = document.getElementById('searchInput');
+  const typeFilter = document.getElementById('typeFilter');
+
+  const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+  const typeValue = typeFilter ? typeFilter.value : 'Todos';
 
   const filtered = currentData.filter(row => {
     const matchesSearch = row.some(cell => cell && String(cell).toLowerCase().includes(searchValue));
@@ -260,9 +267,10 @@ function filterTable() {
   renderHistoryTable(filtered);
 }
 
-// 8. Abrir/Cerrar Modal
+// 4. MODAL Y GUARDADO DE NUEVOS MOVIMIENTOS
 function openModal() {
-  document.getElementById('fecha').valueAsDate = new Date();
+  const fechaInput = document.getElementById('fecha');
+  if (fechaInput) fechaInput.valueAsDate = new Date();
   populateArticleDatalist();
   document.getElementById('movementModal').classList.add('active');
 }
@@ -272,55 +280,50 @@ function closeModal() {
   document.getElementById('addMovementForm').reset();
 }
 
-// 9. Guardar Registro en Firestore
 async function submitForm(e) {
   e.preventDefault();
   const btnSubmit = document.getElementById('btnSubmit');
   btnSubmit.disabled = true;
   btnSubmit.textContent = 'Guardando...';
 
+  const fechaVal = document.getElementById('fecha').value;
+
   const newRecord = {
-    fecha: new Date(document.getElementById('fecha').value), // Convierte a Date
+    fecha: fechaVal ? new Date(fechaVal) : new Date(),
     articulo: document.getElementById('articulo').value,
     tipoMov: document.getElementById('tipoMov').value,
-    cantidad: parseInt(document.getElementById('cantidad').value, 10),
+    cantidad: parseInt(document.getElementById('cantidad').value, 10) || 0,
     tipoSolicitante: document.getElementById('tipoSolicitante').value,
     detalleSolicitante: document.getElementById('detalleSolicitante').value,
     notas: document.getElementById('notas').value,
-    creadoEl: serverTimestamp() // 👈 Usa la fecha/hora exacta del servidor de Firebase
+    creadoEl: serverTimestamp() // Guardado con Timestamp oficial
   };
 
   try {
     await addDoc(collection(db, "almacen"), newRecord);
-
     closeModal();
     await loadSheetData();
-    btnSubmit.disabled = false;
-    btnSubmit.textContent = 'Guardar Registro';
-
   } catch (err) {
     console.error("Error guardando en Firestore:", err);
     alert("Ocurrió un error al guardar el registro.");
+  } finally {
     btnSubmit.disabled = false;
     btnSubmit.textContent = 'Guardar Registro';
   }
 }
 
-// Exponer funciones en window para listeners de eventos HTML
+// Exponer funciones necesarias en la ventana global
 window.setView = setView;
 window.filterTable = filterTable;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.submitForm = submitForm;
 
-import { auth, onAuthStateChanged } from './firebase-config.js';
-
+// 5. LISTENER ÚNICO PARA ESPERAR LA SESIÓN DE FIREBASE
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // Solo cuando Firebase confirma que el usuario está autenticado, carga los datos
     loadSheetData();
   } else {
-    // Si no hay usuario activo, redirige a login
     window.location.href = 'login.html';
   }
 });
