@@ -1,4 +1,4 @@
-// auth.js
+// auth.js - Módulo de Autenticación y Control de Sesión
 import { 
   auth, 
   db, 
@@ -9,7 +9,7 @@ import {
   getDoc 
 } from './firebase-config.js';
 
-// Iniciar sesión contra Firebase Auth
+// 1. INICIAR SESIÓN CONTRA FIREBASE AUTH
 export async function loginUser(email, password) {
   const errorMsg = document.getElementById('errorMsg');
   if (errorMsg) errorMsg.style.display = 'none';
@@ -22,22 +22,23 @@ export async function loginUser(email, password) {
     const userDoc = await getDoc(doc(db, "usuarios", user.uid));
     
     if (userDoc.exists()) {
-    const userData = userDoc.data();
-    
-    // 1. VALIDAR SI EL USUARIO ESTÁ INACTIVO/BLOQUEADO
-    if (userData.activo === false) {
-      await signOut(auth); // Desloguear
-      if (errorMsg) {
-        errorMsg.textContent = "⚠️ Tu cuenta está desactivada. Contacta con el administrador.";
-        errorMsg.style.display = 'block';
+      const userData = userDoc.data();
+      
+      // 1. VALIDAR SI EL USUARIO ESTÁ INACTIVO/BLOQUEADO
+      if (userData.activo === false) {
+        await signOut(auth); // Desloguear de inmediato
+        sessionStorage.clear();
+        if (errorMsg) {
+          errorMsg.textContent = "⚠️ Tu cuenta está desactivada. Contacta con el administrador.";
+          errorMsg.style.display = 'block';
+        }
+        return;
       }
-      return;
-  }
 
-  // 2. GUARDAR ROL Y NOMBRE EN SESSION
-  sessionStorage.setItem('ticneo_role', userData.rol || 'usuario');
-  sessionStorage.setItem('ticneo_name', userData.nombre || user.email);
-}
+      // 2. GUARDAR ROL Y NOMBRE EN SESSION
+      sessionStorage.setItem('ticneo_role', userData.rol || 'usuario');
+      sessionStorage.setItem('ticneo_name', userData.nombre || user.email);
+    }
 
     window.location.href = 'index.html';
   } catch (error) {
@@ -49,7 +50,7 @@ export async function loginUser(email, password) {
   }
 }
 
-// Proteger acceso a páginas privadas
+// 2. PROTEGER ACCESO A PÁGINAS PRIVADAS
 export function checkAuth(requiredRole = null) {
   onAuthStateChanged(auth, async (user) => {
     const isLoginPage = window.location.pathname.endsWith('login.html');
@@ -74,7 +75,7 @@ export function checkAuth(requiredRole = null) {
   });
 }
 
-// Cerrar Sesión
+// 3. CERRAR SESIÓN
 export async function logout() {
   try {
     await signOut(auth);
@@ -90,7 +91,7 @@ if (!window.location.pathname.endsWith('login.html')) {
   checkAuth();
 }
 
-// Exponer la función logout globalmente para usar en botones onclick HTML
+// Exponer funciones globalmente para eventos onclick/onsubmit en el HTML
 window.logout = logout;
 window.handleLogin = function(e) {
   e.preventDefault();
