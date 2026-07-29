@@ -3,88 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Usuarios - TicNeo</title>
+  <title>Gestión de Usuarios - Ticneo Portal</title>
   <link rel="stylesheet" href="styles.css">
+  
+  <!-- Carga de módulos de autenticación y lógica principal -->
   <script type="module" src="auth.js"></script>
   <script type="module" src="usuarios.js"></script>
 </head>
 <body>
-  <!-- Header / Nav (Ajusta los enlaces según tu menú) -->
-  <header class="navbar">
-    <div class="logo">TicNeo Admin</div>
-    <nav>
-      <a href="index.html">Dashboard</a>
-      <a href="almacen.html">Almacén</a>
-      <a href="usuarios.html" class="active">Usuarios</a>
-      <button onclick="logout()" class="btn-logout">Cerrar Sesión</button>
-    </nav>
+
+  <!-- Encabezado Principal (Idéntico a index.html y almacen.html) -->
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div class="user-info">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Sistemas Operativos</span>
+      </div>
+    </div>
+    <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+      🚪 Salir
+    </button>
   </header>
 
-  <main class="container">
-    <div class="page-header">
-      <h2>Gestión de Usuarios</h2>
+  <!-- Contenido Principal -->
+  <main>
+    <!-- Encabezado de Sección con Botón -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <div>
+        <h2>Gestión de Usuarios</h2>
+        <p>Administración de accesos, cuentas y roles de la plataforma.</p>
+      </div>
       <button onclick="openUserModal()" class="btn-primary">+ Nuevo Usuario</button>
     </div>
 
-    <!-- Tabla de Usuarios -->
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Correo Electrónico</th>
-            <th>Rol</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody">
-          <tr><td colspan="5" style="text-align: center;">Cargando usuarios...</td></tr>
-        </tbody>
-      </table>
+    <!-- Contenedor Principal de la Tabla (Mismo diseño de Almacén) -->
+    <div class="table-container">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo Electrónico</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Cargando lista de usuarios...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
-  <!-- Modal Crear / Editar Usuario -->
-  <div id="userModal" class="modal">
-    <div class="modal-content">
-      <h3 id="modalTitle">Nuevo Usuario</h3>
+  <!-- Modal para Crear / Editar Usuario -->
+  <div id="userModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nuevo Usuario</h3>
+        <button onclick="closeUserModal()" class="btn-icon">&times;</button>
+      </div>
+
       <form id="userForm" onsubmit="saveUser(event)">
         <input type="hidden" id="userId">
         
         <div class="form-group">
-          <label>Nombre Completo</label>
-          <input type="text" id="userName" required>
+          <label for="userName">Nombre Completo</label>
+          <input type="text" id="userName" placeholder="Ej. Juan Pérez" required>
         </div>
 
         <div class="form-group">
-          <label>Correo Electrónico</label>
-          <input type="email" id="userEmail" required>
+          <label for="userEmail">Correo Electrónico</label>
+          <input type="email" id="userEmail" placeholder="usuario@ticneo.com" required>
         </div>
 
-        <div class="form-group">
-          <label>Rol de Usuario</label>
-          <select id="userRole" required>
-            <option value="usuario">Usuario Estándar</option>
-            <option value="almacen">Gestor de Almacén</option>
-            <option value="admin">Administrador</option>
-          </select>
+        <div class="form-row" style="display: flex; gap: 1rem;">
+          <div class="form-group" style="flex: 1;">
+            <label for="userRole">Rol de Usuario</label>
+            <select id="userRole" required>
+              <option value="usuario">Usuario Estándar</option>
+              <option value="almacen">Gestor de Almacén</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="flex: 1;">
+            <label for="userStatus">Estado</label>
+            <select id="userStatus" required>
+              <option value="true">Activo</option>
+              <option value="false">Inactivo (Bloqueado)</option>
+            </select>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="userStatus" required>
-            <option value="true">Activo</option>
-            <option value="false">Inactivo (Bloqueado)</option>
-          </select>
-        </div>
-
-        <div class="modal-actions">
+        <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
           <button type="button" onclick="closeUserModal()" class="btn-secondary">Cancelar</button>
           <button type="submit" id="btnSaveUser" class="btn-primary">Guardar Usuario</button>
         </div>
       </form>
     </div>
   </div>
+
 </body>
 </html>
