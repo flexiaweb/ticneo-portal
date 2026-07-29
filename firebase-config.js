@@ -13,7 +13,11 @@ import {
   getDocs, 
   doc, 
   getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
   query, 
+  where,
   orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -41,6 +45,10 @@ export {
   getDocs, 
   doc, 
   getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
   query, 
+  where,
   orderBy 
 };
