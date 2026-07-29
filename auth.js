@@ -1,5 +1,15 @@
 // auth.js - Autenticación basada 100% en Firestore
-import { db, collection, query, where, getDocs } from './firebase-config.js';
+import { 
+  db, 
+  collection, 
+  getDocs, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc,
+  query,
+  where
+} from './firebase-config.js';
 
 // 1. INICIAR SESIÓN VALIDANDO CONTRA FIRESTORE
 export async function loginUser(email, password) {
