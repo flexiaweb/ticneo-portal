@@ -52,7 +52,7 @@ function renderUsersTable() {
     tr.innerHTML = `
       <td><strong style="color: #fff;">${user.nombre || 'Sin Nombre'}</strong></td>
       <td>${user.email || '-'}</td>
-      <td><span class="badge-role">${(user.rol || 'usuario').toUpperCase()}</span></td>
+      <td><span class="badge-role">${user.rol || 'usuario'}</span></td>
       <td>${statusBadge}</td>
       <td style="text-align: right;">
         <button onclick="editUser('${user.id}')" class="btn-action" title="Editar">✏️ Editar</button>
