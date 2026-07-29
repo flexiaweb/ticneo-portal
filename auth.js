@@ -1,6 +1,28 @@
 // auth.js - Gestión de Sesión y Autenticación directa en Firestore
 import { db, collection, getDocs, query, where } from './firebase-config.js';
 
+//VERIFICAR AUTENTICACIÓN AL CARGAR CUALQUIER PÁGINA
+function checkAuth() {
+  const user = localStorage.getItem('ticneo_user');
+  const path = window.location.pathname.toLowerCase();
+  const isLoginPage = path.includes('login.html') || path.endsWith('/login') || path.endsWith('/');
+
+  // Si no está logueado y pretende entrar a páginas protegidas (index, almacén, etc.)
+  if (!user && !isLoginPage) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // Si YA está logueado e intenta volver al login.html
+  if (user && isLoginPage) {
+    window.location.href = 'index.html';
+    return;
+  }
+}
+
+// Ejecutar la verificación inmediatamente
+checkAuth();
+
 // 1. INICIAR SESIÓN
 async function loginUser(email, password) {
   const errorMsg = document.getElementById('errorMsg');
