@@ -20,7 +20,7 @@ async function loadSheetData() {
   const tbody = document.getElementById('tableBody');
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">Cargando datos del almacén...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--text-muted);">Cargando datos del almacén...</td></tr>`;
 
   try {
     // Consulta ordenada por lo más reciente
@@ -128,9 +128,9 @@ function renderHistoryTable(data) {
   const tbody = document.getElementById('tableBody');
   if (!thead || !tbody) return;
 
+  // 1. Quitamos <th>ID</th> de los encabezados (ahora son 7 columnas)
   thead.innerHTML = `
     <tr>
-      <th>ID</th>
       <th>Fecha</th>
       <th>Artículo</th>
       <th>Tipo Mov.</th>
@@ -143,12 +143,12 @@ function renderHistoryTable(data) {
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron resultados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron resultados.</td></tr>`;
     return;
   }
 
   data.forEach(row => {
-    const idAcortado = row[0] ? String(row[0]).substring(0, 6).toUpperCase() : '-';
+    // Ya no usamos row[0] (que era el ID), empezamos a leer desde la Fecha row[1]
     const fecha = row[1] || '-';
     const articulo = row[2] || '-';
     const tipoMov = row[3] || 'Entrada';
@@ -160,9 +160,9 @@ function renderHistoryTable(data) {
     const isEntrada = String(tipoMov).toLowerCase().includes('entrada');
     const badgeClass = isEntrada ? 'badge-entrada' : 'badge-salida';
 
+    // 2. Eliminamos la celda del ID (<td>#${idAcortado}</td>)
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>#${idAcortado}</strong></td>
       <td>${fecha}</td>
       <td style="color:#fff; font-weight: 500;">${articulo}</td>
       <td><span class="badge-mov ${badgeClass}">${tipoMov}</span></td>
