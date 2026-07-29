@@ -12,6 +12,7 @@ import {
   deleteDoc,
   query, 
   where,
+  serverTimestamp,
   orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -25,11 +26,8 @@ const firebaseConfig = {
   appId: "1:118908146607:web:b7eb1315f9fc724205555a"
 };
 
-// Inicializar la aplicación de Firebase
 const app = initializeApp(firebaseConfig);
-
-// Instancia principal de Firestore Database
-export const db = getFirestore(app);
+const db = getFirestore(app);
 
 // Exportar todas las funciones de Firestore requeridas por los módulos
 export { 
@@ -43,5 +41,6 @@ export {
   deleteDoc,
   query, 
   where,
+  serverTimestamp,
   orderBy 
 };
