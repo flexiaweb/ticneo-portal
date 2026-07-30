@@ -81,6 +81,14 @@
           </select>
         </div>
 
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="newRoleInput">O crear un Nuevo Rol:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="newRoleInput" placeholder="Ej. supervisor, tecnico" style="flex: 1;">
+            <button type="button" onclick="createNewRole()" class="btn-action">➕ Crear Rol</button>
+          </div>
+        </div>
+
         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
           Módulos permitidos para este rol:
         </label>
