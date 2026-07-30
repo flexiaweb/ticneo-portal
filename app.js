@@ -1,9 +1,12 @@
+// app.js - Gestión de Almacén y Control de Módulos del Dashboard
 // 1. IMPORTACIONES CENTRALIZADAS DESDE TU CONFIGURACIÓN LOCAL
 import { 
   db, 
   collection, 
   addDoc, 
   getDocs, 
+  doc,
+  getDoc,
   query, 
   orderBy, 
   serverTimestamp 
@@ -12,7 +15,51 @@ import {
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
-// 2. CARGAR DATOS DESDE FIRESTORE
+// -------------------------------------------------------------
+// 🔒 CONTROL DE VISIBILIDAD DE TARJETAS EN INDEX.HTML POR ROL
+// -------------------------------------------------------------
+async function renderDashboardPermissions() {
+  const cards = document.querySelectorAll('.panel-card[data-module]');
+  if (cards.length === 0) return; // No estamos en index.html o no hay tarjetas con data-module
+
+  const userRaw = localStorage.getItem('ticneo_user');
+  if (!userRaw) return;
+
+  const user = JSON.parse(userRaw);
+  const userRol = user.rol || 'usuario';
+
+  try {
+    let permisos = [];
+    
+    // Si no es admin, consultar el documento del rol en la colección 'roles'
+    if (userRol !== 'admin') {
+      const rolRef = doc(db, "roles", userRol);
+      const rolSnap = await getDoc(rolRef);
+
+      if (rolSnap.exists()) {
+        permisos = rolSnap.data().permisos || [];
+      }
+    }
+
+    // Filtrar la visibilidad de cada tarjeta según permisos
+    cards.forEach(card => {
+      const moduleName = card.getAttribute('data-module');
+
+      if (userRol === 'admin' || permisos.includes(moduleName)) {
+        card.style.display = 'flex'; // O 'block', según tu diseño CSS en styles.css
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al renderizar los permisos del Dashboard:", error);
+  }
+}
+
+// -------------------------------------------------------------
+// 2. CARGAR DATOS DESDE FIRESTORE (Módulo Almacén)
+// -------------------------------------------------------------
 async function loadSheetData() {
   const tbody = document.getElementById('tableBody');
   if (!tbody) return;
@@ -313,7 +360,13 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.submitForm = submitForm;
 
-// 5. INICIALIZACIÓN DIRECTA (Sin depender de Firebase Auth)
-document.addEventListener('DOMContentLoaded', () => {
-  loadSheetData();
+// 5. INICIALIZACIÓN DE LA PÁGINA
+document.addEventListener('DOMContentLoaded', async () => {
+  // Aplicar permisos en el Dashboard (index.html)
+  await renderDashboardPermissions();
+
+  // Si estamos en la página del almacén, cargar sus datos
+  if (document.getElementById('tableBody')) {
+    loadSheetData();
+  }
 });
