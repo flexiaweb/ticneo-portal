@@ -31,7 +31,7 @@ async function checkAuth() {
     const tienePermiso = await verificarPermisoRol(user.rol, currentPage);
 
     if (!tienePermiso) {
-      alert("⚠️ No tienes permisos asignados para acceder al módulo: " + currentPage);
+      alert("⚠️ No tienes permisos asignados para acceder al módulo");
       
       // Si se le deniega el acceso y no está en index, lo regresamos al inicio
       if (currentPage !== 'index.html') {
