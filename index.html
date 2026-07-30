@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticneo Portal</title>
     <link rel="stylesheet" href="styles.css">
-    
+    <style>
+      .panel-card[data-module] {
+        display: none; /* Se mostrarán dinámicamente según permisos */
+      }
+    </style>
     <!-- Carga de módulos de autenticación y lógica principal -->
     <script type="module" src="auth.js"></script>
     <script type="module" src="app.js"></script>
   </head>
 <body>
-  <!-- Encabezado Principal -->
   <header>
     <a href="index.html" class="brand">
       <div class="brand-icon">T</div>
@@ -25,7 +28,6 @@
     </button>
   </header>
 
-  <!-- Contenido Principal -->
   <main>
     <div class="section-header">
       <h2>Selección de Módulo</h2>
@@ -34,9 +36,8 @@
 
     <!-- Grid con las tarjetas de los módulos -->
     <div class="dashboard-grid">
-
       <!-- Caja 1: Almacén de Sistemas -->
-      <a href="almacen.html" class="panel-card">
+      <a href="almacen.html" class="panel-card" data-module="almacen.html">
         <div class="card-top">
           <div class="card-icon">📦</div>
           <span class="card-badge badge-primary">Principal</span>
@@ -49,9 +50,8 @@
           <span>Abrir módulo &rarr;</span>
         </div>
       </a>
-
-      <!-- Caja 2: Gestión de Usuarios (NUEVO MÓDULO) -->
-      <a href="usuarios.html" class="panel-card">
+      <!-- Caja 2: Gestión de Usuarios -->
+      <a href="usuarios.html" class="panel-card" data-module="usuarios.html">
         <div class="card-top">
           <div class="card-icon">👥</div>
           <span class="card-badge badge-secondary" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">Administración</span>
@@ -64,7 +64,7 @@
           <span>Abrir módulo &rarr;</span>
         </div>
       </a>
-
+      
     </div>
   </main>
 
