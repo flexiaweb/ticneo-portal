@@ -1,4 +1,4 @@
-// usuarios.js - Gestión de usuarios basada 100% en Firestore
+// usuarios.js - Gestión de usuarios basada 100% en Firestore con hashing de contraseñas
 import { 
   db, 
   collection, 
@@ -8,6 +8,7 @@ import {
   deleteDoc, 
   addDoc 
 } from './firebase-config.js';
+import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
 let usersList = [];
 
@@ -88,7 +89,7 @@ async function deleteUserDoc(uid) {
   }
 }
 
-// 5. GUARDAR / EDITAR USUARIO EN FIRESTORE
+// 5. GUARDAR / EDITAR USUARIO EN FIRESTORE (CON BCRYPT)
 async function saveUser(e) {
   e.preventDefault();
   const uid = document.getElementById('userId').value;
@@ -114,29 +115,39 @@ async function saveUser(e) {
 
     if (uid) {
       // --- MODO EDITAR ---
-      // Solo actualizamos la contraseña si se ingresó algo nuevo
+      // Solo actualizamos y hasheamos la contraseña si se ingresó algo nuevo
       if (password !== "") {
-        userData.password = password;
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        userData.password = hashedPassword;
       }
 
       await updateDoc(doc(db, "usuarios", uid), userData);
       closeUserModal();
       loadUsers();
-      alert("Usuario actualizado correctamente.");
+
+      if (password !== "") {
+        // Muestra la clave en texto plano al admin solo para copiado/confirmación
+        showSuccessModal(email, password);
+      } else {
+        alert("Usuario actualizado correctamente.");
+      }
 
     } else {
       // --- MODO CREAR NUEVO ---
       // Si la contraseña se dejó en blanco, se genera una automática
-      const finalPassword = password !== "" ? password : generateRandomPassword();
-      userData.password = finalPassword;
+      const plainPassword = password !== "" ? password : generateRandomPassword();
+      
+      // 🔒 Aplicar Hash Bcrypt antes de guardar en Firestore
+      const hashedPassword = bcrypt.hashSync(plainPassword, 10);
+      userData.password = hashedPassword;
 
       await addDoc(collection(db, "usuarios"), userData);
 
       closeUserModal();
       loadUsers();
 
-      // Mostrar modal de éxito con las credenciales creadas
-      showSuccessModal(email, finalPassword);
+      // Mostrar modal de éxito mostrando la contraseña plana generada/ingresada
+      showSuccessModal(email, plainPassword);
     }
 
   } catch (error) {
