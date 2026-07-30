@@ -81,6 +81,48 @@ function renderRolesSelects() {
   }
 }
 
+// 0.1 NUEVA FUNCIÓN: CREAR NUEVO ROL EN FIRESTORE
+async function createNewRole() {
+  const input = document.getElementById('newRoleInput');
+  if (!input) return;
+
+  const newRoleRaw = input.value.trim().toLowerCase();
+  // Normalizar slug (sin espacios ni caracteres especiales)
+  const newRole = newRoleRaw.replace(/[^a-z0-9_-]/g, '');
+
+  if (!newRole) {
+    alert("Por favor ingresa un nombre válido para el nuevo rol.");
+    return;
+  }
+
+  if (rolesList.includes(newRole)) {
+    alert(`El rol "${newRole}" ya existe.`);
+    return;
+  }
+
+  try {
+    // Crear el documento del nuevo rol en Firestore con un array vacio de permisos
+    await setDoc(doc(db, "roles", newRole), {
+      permisos: []
+    });
+
+    alert(`✅ Rol "${newRole}" creado con éxito.`);
+    input.value = '';
+
+    // Recargar roles desde Firestore y seleccionar el rol recién creado
+    await loadRoles();
+    
+    const selectModalRol = document.getElementById('selectRol');
+    if (selectModalRol) {
+      selectModalRol.value = newRole;
+      cargarPermisosDelRol(newRole);
+    }
+  } catch (error) {
+    console.error("Error al crear nuevo rol:", error);
+    alert("Error al guardar el nuevo rol en Firestore.");
+  }
+}
+
 // 1. CARGAR USUARIOS
 async function loadUsers() {
   const tbody = document.getElementById('usersTableBody');
@@ -418,6 +460,7 @@ window.openRolesModal = openRolesModal;
 window.closeRolesModal = closeRolesModal;
 window.cargarPermisosDelRol = cargarPermisosDelRol;
 window.guardarPermisos = guardarPermisos;
+window.createNewRole = createNewRole; // Exposición para el botón "➕ Crear Rol"
 
 // Inicialización al cargar el documento
 document.addEventListener('DOMContentLoaded', async () => {
