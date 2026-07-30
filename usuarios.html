@@ -30,13 +30,18 @@
   <main>
     <a href="index.html" class="btn-back">&larr; Volver al Portal</a>
 
-    <!-- Encabezado de Sección con Botón -->
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <!-- Encabezado de Sección con Botones -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h2>Gestión de Usuarios</h2>
         <p>Administración de accesos, cuentas de usuario y permisos del sistema.</p>
       </div>
-      <button onclick="openUserModal()" class="btn-primary">Nuevo Usuario</button>
+      
+      <!-- Contenedor con ambos botones alineados -->
+      <div style="display: flex; gap: 0.5rem;">
+        <button onclick="openRolesModal()" class="btn-secondary">⚙️ Permisos de Rol</button>
+        <button onclick="openUserModal()" class="btn-primary">Nuevo Usuario</button>
+      </div>
     </div>
 
     <!-- Tabla de Usuarios -->
@@ -60,23 +65,37 @@
     </div>
   </main>
 
-  <div id="rolesModal" class="modal">
-    <div class="modal-content">
-      <h3>Configurar Permisos de Rol</h3>
-      
-      <label for="selectRol">Selecciona el Rol:</label>
-      <select id="selectRol" onchange="cargarPermisosDelRol(this.value)">
-        <option value="admin">Administrador</option>
-        <option value="usuario">Usuario Estándar</option>
-        <option value="supervisor">Supervisor</option>
-      </select>
-  
-      <form id="formPermisos" onsubmit="guardarPermisos(event)" style="margin-top: 15px;">
-        <div id="contenedorCheckboxes" class="checkbox-group">
-          <!-- Los checkboxes se generarán dinámicamente -->
+  <!-- Modal para Configurar Permisos de Rol -->
+  <div id="rolesModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>⚙️ Configurar Permisos por Rol</h3>
+        <button type="button" onclick="closeRolesModal()" class="btn-close">&times;</button>
+      </div>
+
+      <form id="formPermisos" onsubmit="guardarPermisos(event)">
+        <div class="form-group full-width" style="margin-bottom: 1rem;">
+          <label for="selectRol">Selecciona el Rol:</label>
+          <select id="selectRol" onchange="cargarPermisosDelRol(this.value)" required>
+            <option value="admin">Administrador</option>
+            <option value="almacen">Gestor de Almacén</option>
+            <option value="usuario">Usuario Estándar</option>
+          </select>
         </div>
-        
-        <button type="submit" class="btn-action" style="margin-top: 15px;">Guardar Permisos</button>
+
+        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          Módulos permitidos para este rol:
+        </label>
+
+        <!-- Contenedor dinámico de Checkboxes -->
+        <div id="contenedorCheckboxes" style="background: rgba(12, 9, 20, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; max-height: 220px; overflow-y: auto;">
+          <!-- Los checkboxes se generarán dinámicamente desde JS -->
+        </div>
+
+        <div class="modal-footer" style="margin-top: 1.5rem;">
+          <button type="button" onclick="closeRolesModal()" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Permisos</button>
+        </div>
       </form>
     </div>
   </div>
