@@ -1,372 +1,170 @@
-// app.js - Gestión de Almacén y Control de Módulos del Dashboard
-// 1. IMPORTACIONES CENTRALIZADAS DESDE TU CONFIGURACIÓN LOCAL
-import { 
-  db, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc,
-  getDoc,
-  query, 
-  orderBy, 
-  serverTimestamp 
-} from './firebase-config.js';
+// auth.js - Gestión de Sesión, Autenticación con Bcrypt y Control de Permisos por Rol
+import { db, collection, getDocs, doc, getDoc, query, where } from './firebase-config.js';
+import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
-let currentData = [];
-let currentView = 'history'; // 'history' o 'stock'
-
-// -------------------------------------------------------------
-// 🔒 CONTROL DE VISIBILIDAD DE TARJETAS EN INDEX.HTML POR ROL
-// -------------------------------------------------------------
-async function renderDashboardPermissions() {
-  const cards = document.querySelectorAll('.panel-card[data-module]');
-  if (cards.length === 0) return; // No estamos en index.html o no hay tarjetas con data-module
-
+// 1. VERIFICAR AUTENTICACIÓN Y PERMISOS DE ACCESO AL CARGAR PÁGINA
+async function checkAuth() {
   const userRaw = localStorage.getItem('ticneo_user');
-  if (!userRaw) return;
+  const path = window.location.pathname.toLowerCase();
+  const isLoginPage = path.includes('login.html') || path.endsWith('/login') || path.endsWith('/');
 
-  const user = JSON.parse(userRaw);
-  const userRol = user.rol || 'usuario';
+  // Redirigir si no hay sesión iniciada y no está en login
+  if (!userRaw && !isLoginPage) {
+    window.location.href = 'login.html';
+    return;
+  }
 
-  try {
-    let permisos = [];
+  // Redirigir a index si ya inició sesión e intenta entrar a login
+  if (userRaw && isLoginPage) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // 🔒 VALIDACIÓN DE PERMISOS DINÁMICOS POR ROL EN FIRESTORE
+  if (userRaw && !isLoginPage) {
+    const user = JSON.parse(userRaw);
     
-    // Si no es admin, consultar el documento del rol en la colección 'roles'
-    if (userRol !== 'admin') {
-      const rolRef = doc(db, "roles", userRol);
-      const rolSnap = await getDoc(rolRef);
+    // Obtener el nombre del archivo actual (ej. "usuarios.html", "almacen.html")
+    let currentPage = path.split('/').pop();
+    if (!currentPage || currentPage === '') currentPage = 'index.html';
 
-      if (rolSnap.exists()) {
-        permisos = rolSnap.data().permisos || [];
+    const tienePermiso = await verificarPermisoRol(user.rol, currentPage);
+
+    if (!tienePermiso) {
+      alert("⚠️ No tienes permisos asignados para acceder al módulo: " + currentPage);
+      
+      // Si se le deniega el acceso y no está en index, lo regresamos al inicio
+      if (currentPage !== 'index.html') {
+        window.location.href = 'index.html';
+      } else {
+        // Si no tiene permiso ni para la página principal, cerramos sesión
+        logout();
       }
     }
-
-    // Filtrar la visibilidad de cada tarjeta según permisos
-    cards.forEach(card => {
-      const moduleName = card.getAttribute('data-module');
-
-      if (userRol === 'admin' || permisos.includes(moduleName)) {
-        card.style.display = 'flex'; // O 'block', según tu diseño CSS en styles.css
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-  } catch (error) {
-    console.error("Error al renderizar los permisos del Dashboard:", error);
   }
 }
 
-// -------------------------------------------------------------
-// 2. CARGAR DATOS DESDE FIRESTORE (Módulo Almacén)
-// -------------------------------------------------------------
-async function loadSheetData() {
-  const tbody = document.getElementById('tableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--text-muted);">Cargando datos del almacén...</td></tr>`;
+// FUNCION AUXILIAR PARA CONSULTAR PERMISOS EN FIRESTORE
+async function verificarPermisoRol(rol, paginaActual) {
+  // El rol 'admin' siempre tiene acceso a todo por defecto
+  if (rol === 'admin') return true;
 
   try {
-    // Consulta ordenada por lo más reciente
-    const q = query(collection(db, "almacen"), orderBy("creadoEl", "desc"));
+    const rolRef = doc(db, "roles", rol);
+    const rolSnap = await getDoc(rolRef);
+
+    if (rolSnap.exists()) {
+      const permisos = rolSnap.data().permisos || [];
+      return permisos.includes(paginaActual);
+    }
+
+    // Si el rol no existe aún en Firestore, bloqueamos por seguridad
+    return false;
+  } catch (error) {
+    console.error("Error al verificar permisos del rol en Firestore:", error);
+    return false;
+  }
+}
+
+// Ejecutar la verificación inmediatamente
+checkAuth();
+
+// 2. INICIAR SESIÓN CON VERIFICACIÓN EXCLUSIVA DE BCRYPT
+async function loginUser(email, password) {
+  const errorMsg = document.getElementById('errorMsg');
+  const btnLogin = document.querySelector('button[type="submit"]');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+
+  if (btnLogin) {
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Iniciando...';
+  }
+
+  try {
+    const q = query(
+      collection(db, "usuarios"), 
+      where("email", "==", email.trim().toLowerCase())
+    );
+
     const querySnapshot = await getDocs(q);
 
-    currentData = [];
+    if (querySnapshot.empty) {
+      throw new Error("El correo electrónico no está registrado.");
+    }
+
+    let userFound = null;
     querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-
-      // Formatear la fecha (Soporta Timestamp de Firebase y texto plano)
-      let fechaFormateada = data.fecha;
-      if (data.fecha && typeof data.fecha.toDate === 'function') {
-        fechaFormateada = data.fecha.toDate().toISOString().split('T')[0];
-      }
-
-      currentData.push([
-        docSnap.id,
-        fechaFormateada || '-',
-        data.articulo || '-',
-        data.tipoMov || 'Entrada',
-        data.cantidad || 0,
-        data.tipoSolicitante || '-',
-        data.detalleSolicitante || '-',
-        data.notas || '-'
-      ]);
+      userFound = { id: docSnap.id, ...docSnap.data() };
     });
 
-    if (currentData.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No hay registros en el almacén.</td></tr>`;
-      return;
+    // 🔒 VERIFICACIÓN DE CONTRASEÑA VÍA BCRYPT
+    const isPasswordValid = bcrypt.compareSync(password, userFound.password);
+
+    if (!isPasswordValid) {
+      throw new Error("Contraseña incorrecta.");
     }
 
-    renderCurrentView();
-    updateKPIs(currentData);
-    populateArticleDatalist();
+    if (userFound.activo === false) {
+      throw new Error("Esta cuenta se encuentra inactiva o bloqueada.");
+    }
+
+    const sessionData = {
+      id: userFound.id,
+      nombre: userFound.nombre,
+      email: userFound.email,
+      rol: userFound.rol
+    };
+
+    localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
+
+    // Redirigir al panel principal
+    window.location.href = 'index.html';
 
   } catch (error) {
-    console.error("Error al cargar datos desde Firestore:", error);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem; color: #f87171;">⚠️ Error al conectar con la base de datos de Almacén. Checkea consola o reglas de Firestore.</td></tr>`;
-  }
-}
+    console.error("Error en el inicio de sesión:", error);
 
-// 3. INVENTARIO Y BÚSQUEDA
-function calculateInventory(data) {
-  const inventory = {};
-  data.forEach(row => {
-    const articulo = row[2] ? String(row[2]).trim() : 'Sin Nombre';
-    const tipoMov = row[3] ? String(row[3]).toLowerCase() : '';
-    const cantidad = parseInt(row[4], 10) || 0;
-
-    if (!inventory[articulo]) {
-      inventory[articulo] = { entradas: 0, salidas: 0, stock: 0 };
+    if (errorMsg) {
+      errorMsg.textContent = "⚠️ " + error.message;
+      errorMsg.style.display = 'block';
+    } else {
+      alert("⚠️ " + error.message);
     }
-
-    if (tipoMov.includes('entrada')) {
-      inventory[articulo].entradas += cantidad;
-      inventory[articulo].stock += cantidad;
-    } else if (tipoMov.includes('salida')) {
-      inventory[articulo].salidas += cantidad;
-      inventory[articulo].stock -= cantidad;
-    }
-  });
-  return inventory;
-}
-
-function populateArticleDatalist() {
-  const datalist = document.getElementById('articlesList');
-  if (!datalist) return;
-  datalist.innerHTML = '';
-  const inventory = calculateInventory(currentData);
-
-  Object.keys(inventory).sort().forEach(artName => {
-    const stock = inventory[artName].stock;
-    const option = document.createElement('option');
-    option.value = artName;
-    option.label = `Stock actual: ${stock} ud(s).`;
-    datalist.appendChild(option);
-  });
-}
-
-function setView(view) {
-  currentView = view;
-  const btnHist = document.getElementById('btnViewHistory');
-  const btnStock = document.getElementById('btnViewStock');
-  const filterCont = document.getElementById('typeFilterContainer');
-
-  if (btnHist) btnHist.classList.toggle('active', view === 'history');
-  if (btnStock) btnStock.classList.toggle('active', view === 'stock');
-  if (filterCont) filterCont.style.display = view === 'history' ? 'block' : 'none';
-
-  renderCurrentView();
-}
-
-function renderCurrentView() {
-  if (currentView === 'history') {
-    filterTable();
-  } else {
-    renderStockTable();
-  }
-}
-
-function renderHistoryTable(data) {
-  const thead = document.getElementById('tableHeader');
-  const tbody = document.getElementById('tableBody');
-  if (!thead || !tbody) return;
-
-  thead.innerHTML = `
-    <tr>
-      <th>Fecha</th>
-      <th>Artículo</th>
-      <th>Tipo Mov.</th>
-      <th>Cantidad</th>
-      <th>Tipo Solicitante</th>
-      <th>Detalle Solicitante</th>
-      <th>Notas</th>
-    </tr>`;
-
-  tbody.innerHTML = '';
-
-  if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron resultados.</td></tr>`;
-    return;
-  }
-
-  data.forEach(row => {
-    const fecha = row[1] || '-';
-    const articulo = row[2] || '-';
-    const tipoMov = row[3] || 'Entrada';
-    const cantidad = row[4] || '0';
-    const tipoSolicitante = row[5] || '-';
-    const detalleSolicitante = row[6] || '-';
-    const notas = row[7] || '-';
-
-    const isEntrada = String(tipoMov).toLowerCase().includes('entrada');
-    const badgeClass = isEntrada ? 'badge-entrada' : 'badge-salida';
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${fecha}</td>
-      <td style="color:#fff; font-weight: 500;">${articulo}</td>
-      <td><span class="badge-mov ${badgeClass}">${tipoMov}</span></td>
-      <td><strong>${cantidad}</strong></td>
-      <td>${tipoSolicitante}</td>
-      <td>${detalleSolicitante}</td>
-      <td style="color: var(--text-muted); font-size: 0.85rem;">${notas}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderStockTable() {
-  const thead = document.getElementById('tableHeader');
-  const tbody = document.getElementById('tableBody');
-  const searchInput = document.getElementById('searchInput');
-  const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
-
-  if (!thead || !tbody) return;
-
-  thead.innerHTML = `
-    <tr>
-      <th>Artículo / Insumo</th>
-      <th>Total Entradas</th>
-      <th>Total Salidas</th>
-      <th>Stock Actual</th>
-      <th>Estado</th>
-    </tr>`;
-
-  tbody.innerHTML = '';
-  const inventory = calculateInventory(currentData);
-  const filteredItems = Object.keys(inventory).filter(item => item.toLowerCase().includes(searchValue));
-
-  if (filteredItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">No se encontraron artículos.</td></tr>`;
-    return;
-  }
-
-  filteredItems.sort().forEach(artName => {
-    const item = inventory[artName];
-    const isAvailable = item.stock > 0;
-    const badgeClass = isAvailable ? 'badge-entrada' : 'badge-salida';
-    const statusText = isAvailable ? 'Disponible' : 'Agotado';
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="color:#fff; font-weight: 600; font-size: 1rem;">📦 ${artName}</td>
-      <td style="color: #4ade80;">+${item.entradas}</td>
-      <td style="color: #f87171;">-${item.salidas}</td>
-      <td style="font-size: 1.1rem;"><strong>${item.stock} ud(s).</strong></td>
-      <td><span class="badge-mov ${badgeClass}">${statusText}</span></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function updateKPIs(data) {
-  const kpiTotal = document.getElementById('kpiTotal');
-  const kpiEntradas = document.getElementById('kpiEntradas');
-  const kpiSalidas = document.getElementById('kpiSalidas');
-
-  if (kpiTotal) kpiTotal.textContent = data.length;
-  
-  let entradas = 0;
-  let salidas = 0;
-
-  data.forEach(row => {
-    const tipo = row[3] ? String(row[3]).toLowerCase() : '';
-    const qty = parseInt(row[4], 10) || 0;
-
-    if (tipo.includes('entrada')) entradas += qty;
-    else if (tipo.includes('salida')) salidas += qty;
-  });
-
-  if (kpiEntradas) kpiEntradas.textContent = '+' + entradas;
-  if (kpiSalidas) kpiSalidas.textContent = '-' + salidas;
-}
-
-function filterTable() {
-  if (currentView === 'stock') {
-    renderStockTable();
-    return;
-  }
-
-  const searchInput = document.getElementById('searchInput');
-  const typeFilter = document.getElementById('typeFilter');
-
-  const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
-  const typeValue = typeFilter ? typeFilter.value : 'Todos';
-
-  const filtered = currentData.filter(row => {
-    const matchesSearch = row.some(cell => cell && String(cell).toLowerCase().includes(searchValue));
-    const tipoMov = row[3] ? String(row[3]).toLowerCase() : '';
-    let matchesType = true;
-
-    if (typeValue === 'Entrada') matchesType = tipoMov.includes('entrada');
-    if (typeValue === 'Salida') matchesType = tipoMov.includes('salida');
-
-    return matchesSearch && matchesType;
-  });
-
-  renderHistoryTable(filtered);
-}
-
-// 4. MODAL Y GUARDADO DE NUEVOS MOVIMIENTOS
-function openModal() {
-  const fechaInput = document.getElementById('fecha');
-  if (fechaInput) fechaInput.valueAsDate = new Date();
-  populateArticleDatalist();
-  document.getElementById('movementModal').classList.add('active');
-}
-
-function closeModal() {
-  document.getElementById('movementModal').classList.remove('active');
-  document.getElementById('addMovementForm').reset();
-}
-
-async function submitForm(e) {
-  e.preventDefault();
-  const btnSubmit = document.getElementById('btnSubmit');
-  btnSubmit.disabled = true;
-  btnSubmit.textContent = 'Guardando...';
-
-  const fechaVal = document.getElementById('fecha').value;
-
-  const newRecord = {
-    fecha: fechaVal ? new Date(fechaVal) : new Date(),
-    articulo: document.getElementById('articulo').value,
-    tipoMov: document.getElementById('tipoMov').value,
-    cantidad: parseInt(document.getElementById('cantidad').value, 10) || 0,
-    tipoSolicitante: document.getElementById('tipoSolicitante').value,
-    detalleSolicitante: document.getElementById('detalleSolicitante').value,
-    notas: document.getElementById('notas').value,
-    creadoEl: serverTimestamp()
-  };
-
-  try {
-    await addDoc(collection(db, "almacen"), newRecord);
-    closeModal();
-    await loadSheetData();
-  } catch (err) {
-    console.error("Error guardando en Firestore:", err);
-    alert("Ocurrió un error al guardar el registro.");
   } finally {
-    btnSubmit.disabled = false;
-    btnSubmit.textContent = 'Guardar Registro';
+    if (btnLogin) {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Iniciar Sesión';
+    }
   }
 }
 
-// Exponer funciones necesarias globalmente
-window.setView = setView;
-window.filterTable = filterTable;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.submitForm = submitForm;
+// 3. CERRAR SESIÓN
+function logout() {
+  localStorage.removeItem('ticneo_user');
+  sessionStorage.clear();
+  window.location.href = 'login.html';
+}
 
-// 5. INICIALIZACIÓN DE LA PÁGINA
-document.addEventListener('DOMContentLoaded', async () => {
-  // Aplicar permisos en el Dashboard (index.html)
-  await renderDashboardPermissions();
+// 4. CAPTURA AUTOMÁTICA DEL FORMULARIO EN LOGIN.HTML
+document.addEventListener('DOMContentLoaded', () => {
+  const loginForm = document.getElementById('loginForm');
 
-  // Si estamos en la página del almacén, cargar sus datos
-  if (document.getElementById('tableBody')) {
-    loadSheetData();
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const emailInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+
+      if (emailInput && passwordInput) {
+        await loginUser(emailInput.value, passwordInput.value);
+      }
+    });
   }
 });
+
+// Exponer funciones globales al objeto window
+window.logout = logout;
+window.loginUser = loginUser;
+
+export { logout, loginUser, checkAuth };
