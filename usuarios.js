@@ -125,12 +125,7 @@ async function saveUser(e) {
       closeUserModal();
       loadUsers();
 
-      if (password !== "") {
-        // Muestra la clave en texto plano al admin solo para copiado/confirmación
-        showSuccessModal(email, password);
-      } else {
-        alert("Usuario actualizado correctamente.");
-      }
+      alert("Usuario actualizado correctamente.");
 
     } else {
       // --- MODO CREAR NUEVO ---
