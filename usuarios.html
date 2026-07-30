@@ -60,6 +60,27 @@
     </div>
   </main>
 
+  <div id="rolesModal" class="modal">
+    <div class="modal-content">
+      <h3>Configurar Permisos de Rol</h3>
+      
+      <label for="selectRol">Selecciona el Rol:</label>
+      <select id="selectRol" onchange="cargarPermisosDelRol(this.value)">
+        <option value="admin">Administrador</option>
+        <option value="usuario">Usuario Estándar</option>
+        <option value="supervisor">Supervisor</option>
+      </select>
+  
+      <form id="formPermisos" onsubmit="guardarPermisos(event)" style="margin-top: 15px;">
+        <div id="contenedorCheckboxes" class="checkbox-group">
+          <!-- Los checkboxes se generarán dinámicamente -->
+        </div>
+        
+        <button type="submit" class="btn-action" style="margin-top: 15px;">Guardar Permisos</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Overlay para Crear / Editar Usuario -->
   <div id="userModal" class="modal-overlay">
     <div class="modal-card">
