@@ -77,9 +77,7 @@
         <div class="form-group full-width" style="margin-bottom: 1rem;">
           <label for="selectRol">Selecciona el Rol:</label>
           <select id="selectRol" onchange="cargarPermisosDelRol(this.value)" required>
-            <option value="admin">Administrador</option>
-            <option value="almacen">Gestor de Almacén</option>
-            <option value="usuario">Usuario Estándar</option>
+            <!-- Se puebla dinámicamente desde Firestore (admin, usuario, etc.) -->
           </select>
         </div>
 
@@ -139,9 +137,7 @@
           <div class="form-group">
             <label for="userRole">Rol de Usuario</label>
             <select id="userRole" required>
-              <option value="usuario">Usuario Estándar</option>
-              <option value="almacen">Gestor de Almacén</option>
-              <option value="admin">Administrador</option>
+              <!-- Se puebla dinámicamente desde Firestore (admin, usuario, etc.) -->
             </select>
           </div>
         
