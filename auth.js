@@ -1,19 +1,18 @@
-// auth.js - Gestión de Sesión y Autenticación directa en Firestore
+// auth.js - Gestión de Sesión y Autenticación con Bcrypt
 import { db, collection, getDocs, query, where } from './firebase-config.js';
+import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
-//VERIFICAR AUTENTICACIÓN AL CARGAR CUALQUIER PÁGINA
+// 1. VERIFICAR AUTENTICACIÓN AL CARGAR CUALQUIER PÁGINA
 function checkAuth() {
   const user = localStorage.getItem('ticneo_user');
   const path = window.location.pathname.toLowerCase();
   const isLoginPage = path.includes('login.html') || path.endsWith('/login') || path.endsWith('/');
 
-  // Si no está logueado y pretende entrar a páginas protegidas (index, almacén, etc.)
   if (!user && !isLoginPage) {
     window.location.href = 'login.html';
     return;
   }
 
-  // Si YA está logueado e intenta volver al login.html
   if (user && isLoginPage) {
     window.location.href = 'index.html';
     return;
@@ -23,23 +22,19 @@ function checkAuth() {
 // Ejecutar la verificación inmediatamente
 checkAuth();
 
-// 1. INICIAR SESIÓN
+// 2. INICIAR SESIÓN CON VERIFICACIÓN EXCLUSIVA DE BCRYPT
 async function loginUser(email, password) {
   const errorMsg = document.getElementById('errorMsg');
   const btnLogin = document.querySelector('button[type="submit"]');
 
-  // Ocultar mensaje de error previo si existe
   if (errorMsg) errorMsg.style.display = 'none';
 
-  // Cambiar estado del botón a cargando
   if (btnLogin) {
     btnLogin.disabled = true;
     btnLogin.textContent = 'Iniciando...';
   }
 
   try {
-    console.log("Intentando iniciar sesión con:", email);
-
     const q = query(
       collection(db, "usuarios"), 
       where("email", "==", email.trim().toLowerCase())
@@ -56,17 +51,17 @@ async function loginUser(email, password) {
       userFound = { id: docSnap.id, ...docSnap.data() };
     });
 
-    // Validar contraseña
-    if (userFound.password !== password) {
+    // 🔒 VERIFICACIÓN DE CONTRASEÑA VÍA BCRYPT
+    const isPasswordValid = bcrypt.compareSync(password, userFound.password);
+
+    if (!isPasswordValid) {
       throw new Error("Contraseña incorrecta.");
     }
 
-    // Validar si la cuenta está activa
     if (userFound.activo === false) {
       throw new Error("Esta cuenta se encuentra inactiva o bloqueada.");
     }
 
-    // Guardar la sesión activa en localStorage
     const sessionData = {
       id: userFound.id,
       nombre: userFound.nombre,
@@ -75,15 +70,13 @@ async function loginUser(email, password) {
     };
 
     localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
-    console.log("Sesión guardada con éxito:", sessionData);
 
-    // Redirigir al panel principal (index.html)
+    // Redirigir al panel principal
     window.location.href = 'index.html';
 
   } catch (error) {
     console.error("Error en el inicio de sesión:", error);
 
-    // Si existe la etiqueta #errorMsg en el HTML, muestra el mensaje ahí; si no, lanza alerta.
     if (errorMsg) {
       errorMsg.textContent = "⚠️ " + error.message;
       errorMsg.style.display = 'block';
@@ -91,7 +84,6 @@ async function loginUser(email, password) {
       alert("⚠️ " + error.message);
     }
   } finally {
-    // Restaurar estado del botón
     if (btnLogin) {
       btnLogin.disabled = false;
       btnLogin.textContent = 'Iniciar Sesión';
@@ -99,20 +91,20 @@ async function loginUser(email, password) {
   }
 }
 
-// 2. CERRAR SESIÓN
+// 3. CERRAR SESIÓN
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
   window.location.href = 'login.html';
 }
 
-// 3. CAPTURA AUTOMÁTICA DEL FORMULARIO EN LOGIN.HTML
+// 4. CAPTURA AUTOMÁTICA DEL FORMULARIO EN LOGIN.HTML
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
 
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault(); // 🛑 Detiene la recarga nativa de la página por HTML
+      e.preventDefault();
 
       const emailInput = document.getElementById('username');
       const passwordInput = document.getElementById('password');
@@ -124,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Exponer funciones globales al objeto window para botones HTML (onclick)
+// Exponer funciones globales al objeto window
 window.logout = logout;
 window.loginUser = loginUser;
 
