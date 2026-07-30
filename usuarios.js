@@ -1,9 +1,11 @@
-// usuarios.js - Gestión de usuarios basada 100% en Firestore con hashing de contraseñas
+// usuarios.js - Gestión de usuarios y permisos por roles en Firestore con hashing bcrypt
 import { 
   db, 
   collection, 
   getDocs, 
   doc, 
+  getDoc,
+  setDoc,
   updateDoc, 
   deleteDoc, 
   addDoc 
@@ -11,6 +13,13 @@ import {
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
 let usersList = [];
+
+// 📌 LISTA GLOBAL DE MÓDULOS DEL SISTEMA
+const MODULOS_SISTEMA = [
+  { id: 'index.html', nombre: 'Inicio / Dashboard' },
+  { id: 'usuarios.html', nombre: 'Gestión de Usuarios' },
+  { id: 'almacen.html', nombre: 'Gestión de Inventario' }
+];
 
 // 1. CARGAR USUARIOS
 async function loadUsers() {
@@ -32,7 +41,7 @@ async function loadUsers() {
   }
 }
 
-// 2. RENDERIZAR TABLA
+// 2. RENDERIZAR TABLA DE USUARIOS
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   tbody.innerHTML = '';
@@ -115,7 +124,6 @@ async function saveUser(e) {
 
     if (uid) {
       // --- MODO EDITAR ---
-      // Solo actualizamos y hasheamos la contraseña si se ingresó algo nuevo
       if (password !== "") {
         const hashedPassword = bcrypt.hashSync(password, 10);
         userData.password = hashedPassword;
@@ -129,10 +137,9 @@ async function saveUser(e) {
 
     } else {
       // --- MODO CREAR NUEVO ---
-      // Si la contraseña se dejó en blanco, se genera una automática
       const plainPassword = password !== "" ? password : generateRandomPassword();
       
-      // 🔒 Aplicar Hash Bcrypt antes de guardar en Firestore
+      // 🔒 Aplicar Hash Bcrypt
       const hashedPassword = bcrypt.hashSync(plainPassword, 10);
       userData.password = hashedPassword;
 
@@ -141,7 +148,7 @@ async function saveUser(e) {
       closeUserModal();
       loadUsers();
 
-      // Mostrar modal de éxito mostrando la contraseña plana generada/ingresada
+      // Mostrar modal de éxito
       showSuccessModal(email, plainPassword);
     }
 
@@ -167,7 +174,6 @@ function editUser(id) {
   document.getElementById('userRole').value = user.rol || 'usuario';
   document.getElementById('userStatus').value = (user.activo !== false).toString();
 
-  // Dejamos la contraseña en blanco y ajustamos textos explicativos
   document.getElementById('userPassword').value = '';
   document.getElementById('userPassword').placeholder = 'Escribe nueva clave para resetear';
   
@@ -198,7 +204,7 @@ function generateRandomPassword() {
   return pass;
 }
 
-// 8. MANEJO DE MODALES
+// 8. MANEJO DE MODALES DE USUARIO
 function openUserModal(reset = true) {
   if (reset) {
     const form = document.getElementById('userForm');
@@ -259,7 +265,82 @@ function copyCredentials() {
   });
 }
 
-// Exportar funciones globales para invocarlas desde el HTML
+// 10. GESTIÓN DE PERMISOS Y ROLES DINÁMICOS
+function openRolesModal() {
+  const modal = document.getElementById('rolesModal');
+  if (modal) {
+    modal.classList.add('active');
+    const selectRol = document.getElementById('selectRol');
+    const rolInicial = selectRol ? selectRol.value : 'admin';
+    cargarPermisosDelRol(rolInicial);
+  }
+}
+
+function closeRolesModal() {
+  const modal = document.getElementById('rolesModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function renderizarListaModulos() {
+  const contenedor = document.getElementById('contenedorCheckboxes');
+  if (!contenedor) return;
+
+  contenedor.innerHTML = '';
+  
+  MODULOS_SISTEMA.forEach(modulo => {
+    const div = document.createElement('div');
+    div.style.padding = '0.4rem 0';
+    div.innerHTML = `
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff;">
+        <input type="checkbox" name="permisos" value="${modulo.id}" style="width: 16px; height: 16px; cursor: pointer;">
+        <span>${modulo.nombre}</span>
+        <small style="color: var(--text-muted, #94a3b8); font-size: 0.75rem;">(${modulo.id})</small>
+      </label>
+    `;
+    contenedor.appendChild(div);
+  });
+}
+
+async function cargarPermisosDelRol(rol) {
+  renderizarListaModulos();
+
+  try {
+    const rolRef = doc(db, "roles", rol);
+    const rolSnap = await getDoc(rolRef);
+
+    if (rolSnap.exists()) {
+      const permisos = rolSnap.data().permisos || [];
+      const checkboxes = document.querySelectorAll('input[name="permisos"]');
+
+      checkboxes.forEach(chk => {
+        chk.checked = permisos.includes(chk.value);
+      });
+    }
+  } catch (error) {
+    console.error("Error al cargar permisos del rol:", error);
+  }
+}
+
+async function guardarPermisos(e) {
+  e.preventDefault();
+  const rol = document.getElementById('selectRol').value;
+  const checkboxes = document.querySelectorAll('input[name="permisos"]:checked');
+  const permisosSeleccionados = Array.from(checkboxes).map(chk => chk.value);
+
+  try {
+    await setDoc(doc(db, "roles", rol), {
+      permisos: permisosSeleccionados
+    }, { merge: true });
+
+    alert(`✅ Permisos actualizados correctamente para el rol: ${rol}`);
+    closeRolesModal();
+  } catch (error) {
+    console.error("Error al guardar permisos:", error);
+    alert("Error al actualizar permisos en Firestore.");
+  }
+}
+
+// 11. EXPORTACIÓN DE FUNCIONES AL ÁMBITO GLOBAL (window)
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
 window.saveUser = saveUser;
@@ -270,5 +351,11 @@ window.resetPasswordGenerator = resetPasswordGenerator;
 window.closeSuccessModal = closeSuccessModal;
 window.copyCredentials = copyCredentials;
 
-// Inicialización al cargar el documento
+// Funciones del Modal de Roles
+window.openRolesModal = openRolesModal;
+window.closeRolesModal = closeRolesModal;
+window.cargarPermisosDelRol = cargarPermisosDelRol;
+window.guardarPermisos = guardarPermisos;
+
+// Inicialización
 document.addEventListener('DOMContentLoaded', loadUsers);
