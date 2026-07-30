@@ -13,6 +13,7 @@ import {
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
 let usersList = [];
+let rolesList = [];
 
 // 📌 LISTA GLOBAL DE MÓDULOS DEL SISTEMA
 const MODULOS_SISTEMA = [
@@ -20,6 +21,65 @@ const MODULOS_SISTEMA = [
   { id: 'usuarios.html', nombre: 'Gestión de Usuarios' },
   { id: 'almacen.html', nombre: 'Gestión de Inventario' }
 ];
+
+// 0. CARGAR ROLES DESDE LA COLECCIÓN 'roles' DE FIRESTORE
+async function loadRoles() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "roles"));
+    rolesList = [];
+
+    querySnapshot.forEach((docSnap) => {
+      rolesList.push(docSnap.id); // Guarda los IDs de los documentos (ej: "admin", "usuario")
+    });
+
+    // Fallback por si la colección está vacía en Firestore
+    if (rolesList.length === 0) {
+      rolesList = ['admin', 'usuario'];
+    }
+
+    renderRolesSelects();
+  } catch (error) {
+    console.error("Error al cargar roles de Firestore:", error);
+    rolesList = ['admin', 'usuario'];
+    renderRolesSelects();
+  }
+}
+
+// Poblado dinámico de los desplegables de roles en el HTML
+function renderRolesSelects() {
+  const selectUserRole = document.getElementById('userRole');
+  const selectModalRol = document.getElementById('selectRol');
+
+  // Rellenar select del formulario de Usuario
+  if (selectUserRole) {
+    const currentVal = selectUserRole.value;
+    selectUserRole.innerHTML = '';
+    rolesList.forEach(rol => {
+      const option = document.createElement('option');
+      option.value = rol;
+      option.textContent = rol.charAt(0).toUpperCase() + rol.slice(1);
+      selectUserRole.appendChild(option);
+    });
+    if (currentVal && rolesList.includes(currentVal)) {
+      selectUserRole.value = currentVal;
+    }
+  }
+
+  // Rellenar select del modal de Configuración de Permisos
+  if (selectModalRol) {
+    const currentVal = selectModalRol.value;
+    selectModalRol.innerHTML = '';
+    rolesList.forEach(rol => {
+      const option = document.createElement('option');
+      option.value = rol;
+      option.textContent = rol.charAt(0).toUpperCase() + rol.slice(1);
+      selectModalRol.appendChild(option);
+    });
+    if (currentVal && rolesList.includes(currentVal)) {
+      selectModalRol.value = currentVal;
+    }
+  }
+}
 
 // 1. CARGAR USUARIOS
 async function loadUsers() {
@@ -266,12 +326,13 @@ function copyCredentials() {
 }
 
 // 10. GESTIÓN DE PERMISOS Y ROLES DINÁMICOS
-function openRolesModal() {
+async function openRolesModal() {
+  await loadRoles(); // Garantiza que los roles del desplegable estén sincronizados
   const modal = document.getElementById('rolesModal');
   if (modal) {
     modal.classList.add('active');
     const selectRol = document.getElementById('selectRol');
-    const rolInicial = selectRol ? selectRol.value : 'admin';
+    const rolInicial = selectRol ? selectRol.value : (rolesList[0] || 'admin');
     cargarPermisosDelRol(rolInicial);
   }
 }
@@ -334,6 +395,7 @@ async function guardarPermisos(e) {
 
     alert(`✅ Permisos actualizados correctamente para el rol: ${rol}`);
     closeRolesModal();
+    loadRoles(); // Refrescar en memoria
   } catch (error) {
     console.error("Error al guardar permisos:", error);
     alert("Error al actualizar permisos en Firestore.");
@@ -357,5 +419,8 @@ window.closeRolesModal = closeRolesModal;
 window.cargarPermisosDelRol = cargarPermisosDelRol;
 window.guardarPermisos = guardarPermisos;
 
-// Inicialización
-document.addEventListener('DOMContentLoaded', loadUsers);
+// Inicialización al cargar el documento
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadRoles();
+  await loadUsers();
+});
