@@ -16,8 +16,8 @@ const NAVES_CONFIG = {
   nave2: {
     nombre: 'Nave 2',
     url: '../img/planonv2.png', // 👈 Ruta de la imagen de tu Nave 2
-    w: 1200, // 👈 Ajusta el ancho real en píxeles de la Nave 2
-    h: 800   // 👈 Ajusta el alto real en píxeles de la Nave 2
+    w: 1176, // 👈 Ajusta el ancho real en píxeles de la Nave 2
+    h: 1078   // 👈 Ajusta el alto real en píxeles de la Nave 2
   }
 };
 
