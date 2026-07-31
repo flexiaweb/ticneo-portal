@@ -38,8 +38,8 @@ async function checkAuth() {
       alert("⚠️ No tienes permisos asignados para acceder al módulo");
       
       // Si se le deniega el acceso y no está en index, lo regresamos al inicio
-      if (currentPage !== 'index.html') {
-        window.location.href = 'index.html';
+      if (currentPage !== '../index.html') {
+        window.location.href = '../index.html';
       } else {
         // Si no tiene permiso ni para la página principal, cerramos sesión
         logout();
@@ -260,7 +260,7 @@ function saveSessionAndRedirect(sessionData) {
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
-  window.location.href = 'login.html';
+  window.location.href = '../login.html';
 }
 
 // Función para renderizar ÚNICAMENTE el nombre del usuario logueado
