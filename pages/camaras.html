@@ -3,158 +3,214 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Cámaras - Ticneo Portal</title>
+  <title>Cámaras de Seguridad - Ticneo Portal</title>
   
-  <!-- CSS Globales y Leaflet -->
+  <!-- CSS Principal del Proyecto -->
+  <link rel="stylesheet" href="../css/styles.css">
+  
+  <!-- Leaflet CSS (Mapa Interactivo) y FontAwesome (Iconos) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  
+
+  <!-- Estilos adicionales específicos para el visor del mapa y marcadores -->
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f4f6f9;
-    }
-    
-    header {
-      background-color: #1e293b;
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    /* Estilos del Mapa y Marcadores */
+    .map-wrapper {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-violet);
     }
 
-    .container {
-      display: flex;
-      height: calc(100vh - 70px);
-    }
-
-    /* Panel Lateral de Controles */
-    .sidebar {
-      width: 320px;
-      background-color: #ffffff;
-      border-right: 1px solid #cbd5e1;
-      padding: 1.5rem;
-      box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      overflow-y: auto;
-    }
-
-    /* Contenedor del Mapa */
     #map {
-      flex: 1;
-      background-color: #0f172a; /* Fondo oscuro alrededor del plano */
+      width: 100%;
+      height: 600px;
+      background-color: #0c0914; /* Mismo tono oscuro del portal */
     }
 
-    .btn {
-      padding: 0.6rem 1rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .btn-primary { background-color: #2563eb; color: white; }
-    .btn-primary:hover { background-color: #1d4ed8; }
-    .btn-danger { background-color: #ef4444; color: white; }
-
-    /* Estilos del Formulario Modal/Flotante */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-    .form-group input, .form-group select {
-      padding: 0.5rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-    }
-
-    /* Icono personalizado para las cámaras en el mapa */
+    /* Marcador de cámara interactivo en el mapa */
     .camera-marker {
-      background: #2563eb;
-      color: white;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      border: 2px solid white;
+      color: #fff;
+      font-size: 0.95rem;
+      border: 2px solid #fff;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+      transition: transform 0.2s ease, background 0.2s ease;
     }
-    .camera-marker.inactiva { background: #ef4444; }
-    .camera-marker.mantenimiento { background: #f59e0b; }
+
+    .camera-marker.activa {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    }
+
+    .camera-marker.inactiva {
+      background: linear-gradient(135deg, #f87171, #dc2626);
+      box-shadow: 0 0 12px rgba(248, 113, 113, 0.6);
+    }
+
+    .camera-marker.mantenimiento {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
+    }
+
+    /* Popups oscuros adaptados al CSS del portal */
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-card) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 12px !important;
+      box-shadow: var(--shadow-violet) !important;
+    }
+
+    .leaflet-popup-tip {
+      background: var(--bg-card) !important;
+    }
+
+    /* Indicador visual cuando el usuario está en modo selección de mapa */
+    .mode-badge {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1000;
+      background: rgba(22, 16, 38, 0.9);
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      backdrop-filter: blur(8px);
+      display: none;
+    }
   </style>
+
+  <!-- Módulos JS de Autenticación y Lógica de Cámaras -->
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/camaras.js"></script>
 </head>
 <body>
 
+  <!-- Header Uniforme del Portal -->
   <header>
-    <h2>📹 Gestión de Cámaras de Seguridad</h2>
-    <div id="userInfoDisplay"></div>
-    <button class="btn btn-danger" onclick="logout()">Salir</button>
+    <a href="../index.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="userInfoDisplay" style="color: var(--text-muted); font-size: 0.85rem;">
+        <!-- Se rellena dinámicamente con JS -->
+      </span>
+      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+        🚪 Salir
+      </button>
+    </div>
   </header>
 
-  <div class="container">
-    <!-- BARRA LATERAL -->
-    <aside class="sidebar">
-      <h3>Acciones</h3>
-      <button id="btnNuevaCamara" class="btn btn-primary">
-        <i class="fa-solid fa-plus"></i> Añadir Cámara al Mapa
-      </button>
+  <!-- Contenido Principal -->
+  <main>
+    <a href="../index.html" class="btn-back">&larr; Volver al Portal Principal</a>
 
-      <hr>
+    <!-- Encabezado de Sección -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2>Cámaras de Seguridad</h2>
+        <p>Ubicación interactiva sobre el plano, estado y orientación de cámaras.</p>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-secondary" onclick="cargarCamarasFirestore()" title="Refrescar">🔄 Actualizar</button>
+        <button class="btn-primary" onclick="activarModoAñadir()">📹 Nueva Cámara</button>
+      </div>
+    </div>
 
-      <!-- Formularios de edición/creación -->
-      <div id="panelFormulario" style="display: none;">
-        <h4 id="formTitle">Nueva Cámara</h4>
-        <form id="cameraForm">
-          <div class="form-group">
-            <label>Nombre / Identificador:</label>
-            <input type="text" id="camNombre" placeholder="Ej: CAM-01 Pasillo Almacén" required>
+    <!-- Tarjetas KPI de Resumen -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Total Cámaras</span>
+        <span class="kpi-value" id="kpiTotalCamaras">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Activas / Operativas</span>
+        <span class="kpi-value entrada" id="kpiCamarasActivas">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Inactivas / Caídas</span>
+        <span class="kpi-value salida" id="kpiCamarasInactivas">0</span>
+      </div>
+    </div>
+
+    <!-- Contenedor del Mapa / Plano Interactivo -->
+    <div class="map-wrapper">
+      <div id="modeBadge" class="mode-badge">
+        🎯 <b>Haz clic en el plano</b> para fijar la posición de la cámara
+      </div>
+      <div id="map"></div>
+    </div>
+  </main>
+
+  <!-- Modal para Registrar / Editar Cámara -->
+  <div id="cameraModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalCamTitle">Registrar Nueva Cámara</h3>
+        <button class="btn-close" onclick="closeCameraModal()">&times;</button>
+      </div>
+      <form id="addCameraForm" onsubmit="submitCameraForm(event)">
+        <div class="form-grid">
+          
+          <div class="form-group full-width">
+            <label for="camNombre">Nombre / Identificador</label>
+            <input type="text" id="camNombre" placeholder="Ej. CAM-01 Pasillo Principal" required>
           </div>
+
           <div class="form-group">
-            <label>Dirección IP / RTSP:</label>
+            <label for="camIp">Dirección IP / RTSP</label>
             <input type="text" id="camIp" placeholder="192.168.1.100">
           </div>
+
           <div class="form-group">
-            <label>Estado:</label>
-            <select id="camEstado">
-              <option value="activa">🟢 Activa / Operativa</option>
-              <option value="mantenimiento">🟡 En Mantenimiento</option>
-              <option value="inactiva">🔴 Inactiva / Caída</option>
+            <label for="camEstado">Estado</label>
+            <select id="camEstado" required>
+              <option value="activa">🟢 Activa</option>
+              <option value="mantenimiento">🟡 Mantenimiento</option>
+              <option value="inactiva">🔴 Inactiva</option>
             </select>
           </div>
+
           <div class="form-group">
-            <label>Orientación / Ángulo (0° - 360°):</label>
-            <input type="number" id="camAngulo" min="0" max="360" value="0">
+            <label for="camAngulo">Orientación (Grados °)</label>
+            <input type="number" id="camAngulo" min="0" max="360" value="0" placeholder="0 - 360">
           </div>
 
-          <p><small>📌 <i>Haz clic en el plano para seleccionar la posición exacta.</i></small></p>
+          <div class="form-group">
+            <label for="camZona">Zona / Ubicación</label>
+            <input type="text" id="camZona" placeholder="Ej. Almacén, Entrada">
+          </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Cámara</button>
-        </form>
-      </div>
+          <div class="form-group full-width">
+            <label>Coordenadas en Plano (X, Y)</label>
+            <input type="text" id="camCoordsDisplay" readonly placeholder="Haz clic en el plano..." style="opacity: 0.7; cursor: not-allowed;">
+          </div>
 
-      <!-- Lista de cámaras registradas -->
-      <div>
-        <h4>Cámaras Registradas</h4>
-        <ul id="listaCamaras" style="list-style: none; padding: 0;">
-          <!-- Se cargan dinámicamente -->
-        </ul>
-      </div>
-    </aside>
+        </div>
 
-    <!-- MAPA INTERACTIVO (Plano) -->
-    <div id="map"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeCameraModal()">Cancelar</button>
+          <button type="submit" id="btnSubmitCam" class="btn-primary">Guardar Cámara</button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <!-- Scripts: Leaflet JS + Módulo JS -->
+  <!-- Librería Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" src="../js/camaras.js"></script>
 </body>
 </html>
