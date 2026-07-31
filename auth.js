@@ -145,8 +145,24 @@ function logout() {
   window.location.href = 'login.html';
 }
 
+// Función para renderizar ÚNICAMENTE el nombre del usuario logueado
+function displayLoggedUser() {
+  const userDisplay = document.getElementById('userInfoDisplay');
+  if (!userDisplay) return;
+
+  const userRaw = localStorage.getItem('ticneo_user');
+  if (userRaw) {
+    const user = JSON.parse(userRaw);
+    const nombre = user.nombre || user.email || 'Usuario';
+
+    userDisplay.innerHTML = `👤 <strong style="color: #fff;">${nombre}</strong>`;
+  }
+}
+
 // 4. CAPTURA AUTOMÁTICA DEL FORMULARIO EN LOGIN.HTML
 document.addEventListener('DOMContentLoaded', () => {
+  displayLoggedUser();
+  
   const loginForm = document.getElementById('loginForm');
 
   if (loginForm) {
