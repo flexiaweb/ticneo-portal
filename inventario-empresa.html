@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario Empresa - Ticneo Portal</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="inventario-empresa.js"></script>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="userInfoDisplay" style="color: #94a3b8; font-size: 0.85rem;"></span>
+      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🚪 Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2>Inventario General de Empresa</h2>
+        <p>Control y asignación de puestos de trabajo, ordenadores y periféricos.</p>
+      </div>
+      <button onclick="openFormModal()" class="btn-action">➕ Nuevo Registro</button>
+    </div>
+
+    <!-- Filtros y Búsqueda -->
+    <div class="controls-bar" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+      <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 Buscar por empleado, ID PC, modelo o departamento..." style="flex: 1; min-width: 250px;">
+      <select id="statusFilter" onchange="filterTable()" style="width: auto;">
+        <option value="Todos">Todos los Estados</option>
+        <option value="En uso">En uso</option>
+        <option value="En stock">En stock</option>
+      </select>
+    </div>
+
+    <!-- Tabla Principal Resumida -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th>Ubicación / Dpto</th>
+            <th>ID PC</th>
+            <th>Marca y Modelo</th>
+            <th>Pantallas</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryTableBody">
+          <tr><td colspan="7" class="loading-box">Cargando inventario...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- MODAL 1: FICHA DE DETALLE COMPLETO (👁️) -->
+  <div id="detailModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 id="detailTitle">Detalle del Puesto</h3>
+        <button onclick="closeDetailModal()" class="btn-close">&times;</button>
+      </div>
+      <div id="detailBody" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1rem;">
+        <!-- Se rellena dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CREAR / EDITAR REGISTRO -->
+  <div id="formModal" class="modal">
+    <div class="modal-content" style="max-width: 750px;">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nuevo Registro de Equipamiento</h3>
+        <button onclick="closeFormModal()" class="btn-close">&times;</button>
+      </div>
+
+      <form id="equipForm" onsubmit="saveEquipment(event)" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+        <input type="hidden" id="recordId">
+
+        <!-- Sección 1: Empleado -->
+        <fieldset style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem;">
+          <legend style="color: #38bdf8; font-weight: bold;">👤 Datos del Empleado y Ubicación</legend>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div>
+              <label>Email Empleado *</label>
+              <input type="email" id="empEmail" required placeholder="ejemplo@empresa.com">
+            </div>
+            <div>
+              <label>Nombre y Apellidos *</label>
+              <input type="text" id="empNombre" required placeholder="Juan Pérez">
+            </div>
+            <div>
+              <label>Departamento</label>
+              <input type="text" id="empDpto" placeholder="Ej. Contabilidad, IT, RRHH">
+            </div>
+            <div>
+              <label>Zona / Ubicación</label>
+              <input type="text" id="empZona" placeholder="Ej. Planta 2 / Mesa 14">
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Sección 2: PC -->
+        <fieldset style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem;">
+          <legend style="color: #38bdf8; font-weight: bold;">💻 Datos del Ordenador / PC</legend>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem;">
+            <div>
+              <label>ID Inventario PC *</label>
+              <input type="text" id="pcId" required placeholder="SFT-XXXXX">
+            </div>
+            <div>
+              <label>Marca y Modelo</label>
+              <input type="text" id="pcModelo" placeholder="Ej. Lenovo ThinkPad L14">
+            </div>
+            <div>
+              <label>Nº de Serie PC</label>
+              <input type="text" id="pcSerie" placeholder="SN-12345678">
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Sección 3: Pantallas -->
+        <fieldset style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem;">
+          <legend style="color: #38bdf8; font-weight: bold;">🖥️ Monitores</legend>
+          <div style="margin-bottom: 0.8rem;">
+            <label>Nº Pantallas Empresa</label>
+            <select id="pantallasNum" onchange="toggleScreensInputs()">
+              <option value="0">0 Pantallas</option>
+              <option value="1">1 Pantalla</option>
+              <option value="2">2 Pantallas</option>
+            </select>
+          </div>
+          
+          <div id="pantalla1Block" style="display: none; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.5rem;">
+            <div><label>Pantalla 1: Modelo y Pulgadas</label><input type="text" id="p1Modelo" placeholder="Dell 24 pulgadas P2419H"></div>
+            <div><label>Pantalla 1: Nº Serie</label><input type="text" id="p1Serie" placeholder="SN-P1-001"></div>
+          </div>
+
+          <div id="pantalla2Block" style="display: none; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div><label>Pantalla 2: Modelo y Pulgadas</label><input type="text" id="p2Modelo" placeholder="Dell 24 pulgadas P2419H"></div>
+            <div><label>Pantalla 2: Nº Serie</label><input type="text" id="p2Serie" placeholder="SN-P2-002"></div>
+          </div>
+        </fieldset>
+
+        <!-- Sección 4: Periféricos y Notas -->
+        <fieldset style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem;">
+          <legend style="color: #38bdf8; font-weight: bold;">⌨️ Periféricos, Estado y Notas</legend>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div>
+              <label>Origen Teclado</label>
+              <select id="origenTeclado">
+                <option value="Empresa">Empresa</option>
+                <option value="Propio">Propio del empleado</option>
+                <option value="Integrado Portátil">Integrado en portátil</option>
+              </select>
+            </div>
+            <div>
+              <label>Origen Ratón</label>
+              <select id="origenRaton">
+                <option value="Empresa">Empresa</option>
+                <option value="Propio">Propio del empleado</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div>
+              <label>Otros Accesorios</label>
+              <input type="text" id="accesorios" placeholder="Ej. Docking station, cascos Jabra, adaptador HDMI">
+            </div>
+            <div>
+              <label>Estado</label>
+              <select id="estadoRegistro">
+                <option value="En uso">En uso</option>
+                <option value="En stock">En stock</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.8rem;">
+            <label>Notas Adicionales</label>
+            <textarea id="notasRegistro" rows="2" placeholder="Observaciones sobre estado, material propio, etc."></textarea>
+          </div>
+        </fieldset>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+          <button type="button" onclick="closeFormModal()" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="btnSaveRecord" class="btn-action">Guardar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
