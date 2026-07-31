@@ -1,20 +1,38 @@
-// camaras.js - Módulo de Gestión de Cámaras sobre Mapa Interactivo
+// camaras.js - Módulo de Gestión de Cámaras Multi-Nave
 import { db, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from './firebase-config.js';
 import { checkAuth, logout } from './auth.js';
 
-let map = null;
-let modoAñadirCamara = false;
-let tempCoords = null; // Coordenadas temporales
-let marcadoresLocales = {}; // Referencias a marcadores Leaflet
-
-// Exponer la función de Logout globalmente para el Header
+// Exponer logout
 window.logout = logout;
 
-// 1. INICIALIZAR EL MAPA
+// Configuración de las Naves / Planos
+const NAVES_CONFIG = {
+  nave1: {
+    nombre: 'Nave 1',
+    url: '../img/planonv1.png', // Ruta de la Nave 1
+    w: 1023, // Ancho en píxeles de la imagen 1
+    h: 1008  // Alto en píxeles de la imagen 1
+  },
+  nave2: {
+    nombre: 'Nave 2',
+    url: '../img/planonv2.png', // 👈 Ruta de la imagen de tu Nave 2
+    w: 1200, // 👈 Ajusta el ancho real en píxeles de la Nave 2
+    h: 800   // 👈 Ajusta el alto real en píxeles de la Nave 2
+  }
+};
+
+let map = null;
+let imageOverlay = null;
+let naveActual = 'nave1'; // Nave seleccionada por defecto
+let modoAñadirCamara = false;
+let tempCoords = null;
+let marcadoresLocales = {};
+let camarasCache = []; // Caché local de cámaras cargadas desde Firestore
+
+// 1. INICIALIZAR MAPA CON LA NAVE SELECCIONADA
 function initMap() {
-  const w = 1023;
-  const h = 1008;
-  const bounds = [[0, 0], [h, w]];
+  const config = NAVES_CONFIG[naveActual];
+  const bounds = [[0, 0], [config.h, config.w]];
 
   map = L.map('map', {
     crs: L.CRS.Simple,
@@ -23,33 +41,55 @@ function initMap() {
     bounceAtZoomLimits: false
   });
 
-  const imageUrl = '../img/planonv1.png';
-  L.imageOverlay(imageUrl, bounds).addTo(map);
+  imageOverlay = L.imageOverlay(config.url, bounds).addTo(map);
   map.fitBounds(bounds);
 
-  // Evento clic en el mapa
   map.on('click', onMapClick);
-
-  // Cargar cámaras existentes
   cargarCamarasFirestore();
 }
 
-// 2. ACTIVAR MODO AÑADIR (Llamado desde el botón HTML)
+// 2. CAMBIAR ENTRE NAVES / PLANOS
+window.cambiarNave = function(idNave) {
+  if (naveActual === idNave || !NAVES_CONFIG[idNave]) return;
+
+  naveActual = idNave;
+
+  // Actualizar botones UI
+  document.querySelectorAll('.btn-nave').forEach(btn => btn.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Cancelar modo añadir si estaba activo
+  modoAñadirCamara = false;
+  const badge = document.getElementById('modeBadge');
+  if (badge) badge.style.display = 'none';
+
+  // Cambiar plano en Leaflet
+  const config = NAVES_CONFIG[naveActual];
+  const bounds = [[0, 0], [config.h, config.w]];
+
+  map.removeLayer(imageOverlay);
+  imageOverlay = L.imageOverlay(config.url, bounds).addTo(map);
+  map.fitBounds(bounds);
+
+  // Redibujar las cámaras de la nueva nave
+  renderizarCamarasNaveActual();
+};
+
+// 3. ACTIVAR MODO AÑADIR CÁMARA
 window.activarModoAñadir = function() {
   modoAñadirCamara = true;
   const badge = document.getElementById('modeBadge');
   if (badge) badge.style.display = 'block';
-  alert("👉 Por favor, haz clic sobre la zona del plano donde quieres colocar la cámara.");
+  alert(`👉 Haz clic sobre el plano de la ${NAVES_CONFIG[naveActual].nombre} para colocar la cámara.`);
 };
 
-// 3. MANEJAR CLIC EN EL MAPA
+// 4. MANEJAR CLIC EN EL MAPA
 function onMapClick(e) {
   if (!modoAñadirCamara) return;
 
   const { lat, lng } = e.latlng;
   tempCoords = { y: Math.round(lat), x: Math.round(lng) };
 
-  // Abrir Modal
   const inputCoords = document.getElementById('camCoordsDisplay');
   if (inputCoords) inputCoords.value = `X: ${tempCoords.x}, Y: ${tempCoords.y}`;
   
@@ -57,7 +97,7 @@ function onMapClick(e) {
   if (modal) modal.classList.add('active');
 }
 
-// 4. ABRIR / CERRAR MODAL
+// 5. CERRAR MODAL
 window.closeCameraModal = function() {
   const modal = document.getElementById('cameraModal');
   if (modal) modal.classList.remove('active');
@@ -72,45 +112,54 @@ window.closeCameraModal = function() {
   tempCoords = null;
 };
 
-// 5. CARGAR CÁMARAS Y ACTUALIZAR KPIS
+// 6. CARGAR CÁMARAS DESDE FIRESTORE
 window.cargarCamarasFirestore = async function() {
   try {
     const querySnapshot = await getDocs(collection(db, "camaras"));
-    
-    // Limpiar marcadores antiguos
-    Object.values(marcadoresLocales).forEach(marker => map.removeLayer(marker));
-    marcadoresLocales = {};
-
-    let total = 0;
-    let activas = 0;
-    let inactivas = 0;
+    camarasCache = [];
 
     querySnapshot.forEach((docSnap) => {
-      const cam = { id: docSnap.id, ...docSnap.data() };
-      dibujarCamaraEnMapa(cam);
-      
-      // Conteo para KPIs
-      total++;
-      if (cam.estado === 'activa') activas++;
-      if (cam.estado === 'inactiva') inactivas++;
+      camarasCache.push({ id: docSnap.id, ...docSnap.data() });
     });
 
-    // Actualizar KPIs en la UI
-    document.getElementById('kpiTotalCamaras').innerText = total;
-    document.getElementById('kpiCamarasActivas').innerText = activas;
-    document.getElementById('kpiCamarasInactivas').innerText = inactivas;
+    renderizarCamarasNaveActual();
 
   } catch (error) {
-    console.error("Error al cargar las cámaras desde Firestore:", error);
+    console.error("Error al cargar cámaras desde Firestore:", error);
   }
 };
 
-// 6. DIBUJAR MARCADOR EN LEAFLET
-function dibujarCamaraEnMapa(cam) {
-  if (marcadoresLocales[cam.id]) {
-    map.removeLayer(marcadoresLocales[cam.id]);
-  }
+// 7. RENDERIZAR CÁMARAS Y ACTUALIZAR KPIS SEGÚN LA NAVE ACTIVA
+function renderizarCamarasNaveActual() {
+  // Limpiar marcadores previos del mapa
+  Object.values(marcadoresLocales).forEach(marker => map.removeLayer(marker));
+  marcadoresLocales = {};
 
+  let total = 0;
+  let activas = 0;
+  let inactivas = 0;
+
+  camarasCache.forEach((cam) => {
+    // Si la cámara no tiene asignada nave (registros antiguos), se asigna 'nave1' por defecto
+    const naveCamara = cam.nave || 'nave1';
+
+    if (naveCamara === naveActual) {
+      dibujarCamaraEnMapa(cam);
+      
+      total++;
+      if (cam.estado === 'activa') activas++;
+      if (cam.estado === 'inactiva') inactivas++;
+    }
+  });
+
+  // Actualizar KPIs
+  document.getElementById('kpiTotalCamaras').innerText = total;
+  document.getElementById('kpiCamarasActivas').innerText = activas;
+  document.getElementById('kpiCamarasInactivas').innerText = inactivas;
+}
+
+// 8. DIBUJAR MARCADOR EN MAPA
+function dibujarCamaraEnMapa(cam) {
   const customIcon = L.divIcon({
     className: 'custom-div-icon',
     html: `
@@ -126,7 +175,8 @@ function dibujarCamaraEnMapa(cam) {
 
   marker.bindPopup(`
     <strong style="font-size: 1.1rem; color: #fff;">${cam.nombre}</strong><br><br>
-    IP: <code style="color: var(--accent-cyan);">${cam.ip || 'N/A'}</code><br>
+    Nave: <b style="color: var(--accent-cyan);">${NAVES_CONFIG[cam.nave || 'nave1'].nombre}</b><br>
+    IP: <code>${cam.ip || 'N/A'}</code><br>
     Estado: <b style="text-transform: uppercase;">${cam.estado}</b><br>
     Zona: <b>${cam.zona || 'Sin asignar'}</b><br>
     Orientación: ${cam.angulo || 0}°<br><br>
@@ -138,7 +188,7 @@ function dibujarCamaraEnMapa(cam) {
   marcadoresLocales[cam.id] = marker;
 }
 
-// 7. GUARDAR CÁMARA (Formulario Submit)
+// 9. GUARDAR CÁMARA (Formulario Submit)
 window.submitCameraForm = async function(e) {
   e.preventDefault();
 
@@ -153,16 +203,17 @@ window.submitCameraForm = async function(e) {
     estado: document.getElementById('camEstado').value,
     angulo: parseInt(document.getElementById('camAngulo').value) || 0,
     zona: document.getElementById('camZona').value.trim(),
+    nave: naveActual, // 👈 Guarda automáticamente en qué Nave se creó
     ubicacion: tempCoords,
     creadoEn: new Date()
   };
 
   try {
     await addDoc(collection(db, "camaras"), nuevaCamara);
-    alert("✅ Cámara registrada exitosamente.");
+    alert(`✅ Cámara registrada en ${NAVES_CONFIG[naveActual].nombre}.`);
     
     closeCameraModal();
-    cargarCamarasFirestore(); // Recargar mapa e indicadores
+    cargarCamarasFirestore();
 
   } catch (error) {
     console.error("Error al guardar la cámara:", error);
@@ -170,7 +221,7 @@ window.submitCameraForm = async function(e) {
   }
 };
 
-// 8. ELIMINAR CÁMARA
+// 10. ELIMINAR CÁMARA
 window.eliminarCamara = async function(id) {
   if (confirm("¿Estás seguro de eliminar esta cámara?")) {
     try {
@@ -182,7 +233,7 @@ window.eliminarCamara = async function(id) {
   }
 };
 
-// 9. INICIALIZACIÓN DE PÁGINA
+// INICIALIZACIÓN
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth();
   initMap();
