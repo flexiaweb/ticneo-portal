@@ -9,6 +9,8 @@
   <script type="module" src="inventario-empresa.js"></script>
 </head>
 <body>
+
+  <!-- Header Sticky -->
   <header>
     <a href="index.html" class="brand">
       <div class="brand-icon">T</div>
@@ -19,26 +21,29 @@
     </a>
 
     <div class="user-info">
-      <span id="userInfoDisplay" style="color: var(--text-muted); font-size: 0.85rem;">
-        <!-- Se rellena dinámicamente -->
-      </span>
+      <span id="userInfoDisplay" style="color: var(--text-muted); font-size: 0.85rem;"></span>
       <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
         🚪 Salir
       </button>
     </div>
   </header>
 
+  <!-- Layout Principal -->
   <main>
     <a href="index.html" class="btn-back">&larr; Volver al Panel Principal</a>
 
+    <!-- Header de Sección -->
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h2>Inventario General de Empresa</h2>
         <p>Control y asignación de puestos de trabajo, ordenadores, pantallas y periféricos.</p>
       </div>
-      <button onclick="openFormModal()" class="btn-primary">Nuevo Registro</button>
+      <button onclick="openFormModal()" class="btn-primary">
+        ➕ Nuevo Registro
+      </button>
     </div>
 
+    <!-- Barra de Filtros y Búsqueda -->
     <div class="table-controls">
       <div class="search-box" style="flex: 1; min-width: 260px;">
         <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 Buscar por empleado, ID PC, modelo o departamento...">
@@ -54,6 +59,7 @@
       </div>
     </div>
 
+    <!-- Tabla Principal Resumida -->
     <div class="table-container">
       <table class="data-table">
         <thead>
@@ -62,7 +68,7 @@
             <th>Ubicación / Dpto</th>
             <th>ID PC</th>
             <th>Marca y Modelo</th>
-            <th>Pantallas</th>
+            <th>Pantallas y Periféricos</th>
             <th>Estado</th>
             <th style="text-align: right;">Acciones</th>
           </tr>
@@ -78,13 +84,13 @@
 
   <!-- MODAL 1: FICHA DE DETALLE COMPLETO (👁️) -->
   <div id="detailModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 650px;">
+    <div class="modal-card" style="max-width: 600px;">
       <div class="modal-header">
         <h3 id="detailTitle">Detalle del Puesto</h3>
         <button onclick="closeDetailModal()" class="btn-close">&times;</button>
       </div>
       
-      <div id="detailBody" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1rem; font-size: 0.9rem; color: var(--text-main);">
+      <div id="detailBody" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; font-size: 0.9rem; color: var(--text-main);">
         <!-- Se rellena dinámicamente desde JS -->
       </div>
 
@@ -96,7 +102,7 @@
 
   <!-- MODAL 2: CREAR / EDITAR REGISTRO -->
   <div id="formModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 750px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-card" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
         <h3 id="modalTitle">Nuevo Registro de Equipamiento</h3>
         <button onclick="closeFormModal()" class="btn-close">&times;</button>
@@ -105,53 +111,46 @@
       <form id="equipForm" onsubmit="saveEquipment(event)" style="display: flex; flex-direction: column; gap: 1.25rem;">
         <input type="hidden" id="recordId">
 
-        <!-- Sección 1: Datos Empleado -->
+        <!-- Sección 1: Datos Empleado y Ordenador Unificados -->
         <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
           <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
-            👤 Datos del Empleado y Ubicación
+            👤 Empleado y Equipo Asignado
           </legend>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Email Empleado *</label>
-              <input type="email" id="empEmail" required placeholder="ejemplo@empresa.com">
-            </div>
-            <div class="form-group">
-              <label>Nombre y Apellidos *</label>
-              <input type="text" id="empNombre" required placeholder="Juan Pérez">
-            </div>
-            <div class="form-group">
-              <label>Departamento</label>
-              <input type="text" id="empDpto" placeholder="Ej. Contabilidad, IT, RRHH">
-            </div>
-            <div class="form-group">
-              <label>Zona / Ubicación</label>
-              <input type="text" id="empZona" placeholder="Ej. Planta 2 / Mesa 14">
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- Sección 2: Datos del PC -->
-        <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
-          <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
-            💻 Datos del Ordenador / PC
-          </legend>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>ID Inventario PC *</label>
-              <input type="text" id="pcId" required placeholder="SFT-XXXXX">
-            </div>
-            <div class="form-group">
-              <label>Marca y Modelo</label>
-              <input type="text" id="pcModelo" placeholder="Ej. Lenovo ThinkPad L14">
-            </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <!-- Nombre en ancho completo -->
             <div class="form-group full-width">
-              <label>Nº de Serie PC</label>
-              <input type="text" id="pcSerie" placeholder="SN-12345678">
+              <label>Nombre y Apellidos *</label>
+              <input type="text" id="empNombre" required placeholder="Ej. Juan Pérez García">
+            </div>
+
+            <!-- Fila: ID PC y Marca/Modelo -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ID Inventario PC *</label>
+                <input type="text" id="pcId" required placeholder="SFT-XXXXX">
+              </div>
+              <div class="form-group">
+                <label>Marca y Modelo</label>
+                <input type="text" id="pcModelo" placeholder="Ej. Lenovo ThinkPad L14">
+              </div>
+            </div>
+
+            <!-- Fila: Departamento y Ubicación -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Departamento</label>
+                <input type="text" id="empDpto" placeholder="Ej. Contabilidad, IT, RRHH">
+              </div>
+              <div class="form-group">
+                <label>Zona / Ubicación</label>
+                <input type="text" id="empZona" placeholder="Ej. Planta 2 / Mesa 14">
+              </div>
             </div>
           </div>
         </fieldset>
 
-        <!-- Sección 3: Monitores -->
+        <!-- Sección 2: Monitores -->
         <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
           <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
             🖥️ Monitores
@@ -165,22 +164,18 @@
             </select>
           </div>
 
-          <div id="pantalla1Block" class="form-grid" style="display: none; margin-bottom: 0.8rem;">
-            <div class="form-group">
-              <label>Pantalla 1: Modelo y Pulgadas</label>
-              <input type="text" id="p1Modelo" placeholder="Dell 24 pulgadas P2419H">
-            </div>
+          <div id="pantalla1Block" class="form-group" style="display: none; margin-bottom: 0.8rem;">
+            <label>Pantalla 1: Modelo y Pulgadas</label>
+            <input type="text" id="p1Modelo" placeholder="Ej. Dell 24 pulgadas P2419H">
           </div>
 
-          <div id="pantalla2Block" class="form-grid" style="display: none;">
-            <div class="form-group">
-              <label>Pantalla 2: Modelo y Pulgadas</label>
-              <input type="text" id="p2Modelo" placeholder="Dell 24 pulgadas P2419H">
-            </div>
+          <div id="pantalla2Block" class="form-group" style="display: none;">
+            <label>Pantalla 2: Modelo y Pulgadas</label>
+            <input type="text" id="p2Modelo" placeholder="Ej. Dell 24 pulgadas P2419H">
           </div>
         </fieldset>
 
-        <!-- Sección 4: Periféricos y Notas -->
+        <!-- Sección 3: Periféricos y Notas -->
         <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
           <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
             ⌨️ Periféricos, Estado y Notas
@@ -223,7 +218,7 @@
 
           <div class="form-group full-width">
             <label>Notas Adicionales</label>
-            <textarea id="notasRegistro" rows="2" placeholder="Observaciones sobre el estado o material del empleado..."></textarea>
+            <textarea id="notasRegistro" rows="2" placeholder="Observaciones sobre el estado o material..."></textarea>
           </div>
         </fieldset>
 
