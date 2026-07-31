@@ -10,8 +10,8 @@ let marcadoresLocales = {}; // Para guardar referencias a los marcadores dibujad
 // 1. INICIALIZAR EL MAPA CON EL PLANO DE LA EMPRESA
 function initMap() {
   // Dimensiones en píxeles de la imagen de tu plano (Ejemplo: 1920x1080)
-  const w = 1920;
-  const h = 1080;
+  const w = 1023;
+  const h = 1008;
   const bounds = [[0, 0], [h, w]];
 
   // Inicializar Leaflet en sistema de coordenadas simples (CRS.Simple)
