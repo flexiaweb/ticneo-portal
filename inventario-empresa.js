@@ -74,7 +74,7 @@ function renderTable(data) {
     // Badge de Estado
     const isStock = item.estadoRegistro === 'En stock';
     const statusBadgeClass = isStock ? 'badge-role role-admin' : 'badge-role role-user';
-    const statusText = isStock ? '📦 En stock (Almacén)' : '💻 En uso';
+    const statusText = isStock ? 'En stock' : 'En uso';
 
     // Construir texto de pantallas
     const numPantallasStr = String(item.pantallasNum || "0");
