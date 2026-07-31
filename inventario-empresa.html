@@ -170,20 +170,12 @@
               <label>Pantalla 1: Modelo y Pulgadas</label>
               <input type="text" id="p1Modelo" placeholder="Dell 24 pulgadas P2419H">
             </div>
-            <div class="form-group">
-              <label>Pantalla 1: Nº Serie</label>
-              <input type="text" id="p1Serie" placeholder="SN-P1-001">
-            </div>
           </div>
 
           <div id="pantalla2Block" class="form-grid" style="display: none;">
             <div class="form-group">
               <label>Pantalla 2: Modelo y Pulgadas</label>
               <input type="text" id="p2Modelo" placeholder="Dell 24 pulgadas P2419H">
-            </div>
-            <div class="form-group">
-              <label>Pantalla 2: Nº Serie</label>
-              <input type="text" id="p2Serie" placeholder="SN-P2-002">
             </div>
           </div>
         </fieldset>
@@ -195,18 +187,22 @@
           </legend>
           <div class="form-grid" style="margin-bottom: 0.8rem;">
             <div class="form-group">
-              <label>Origen Teclado</label>
-              <select id="origenTeclado">
-                <option value="Empresa">Empresa</option>
-                <option value="Propio">Propio del empleado</option>
-                <option value="Integrado Portátil">Integrado en portátil</option>
+              <label>Conexión / Tipo Teclado</label>
+              <select id="monTeclado">
+                <option value="USB">USB</option>
+                <option value="BLUETOOTH">BLUETOOTH</option>
+                <option value="PS2">PS2</option>
+                <option value="INTEGRADO PORTATIL">INTEGRADO PORTÁTIL</option>
+                <option value="PERSONAL">PERSONAL (Del empleado)</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Origen Ratón</label>
-              <select id="origenRaton">
-                <option value="Empresa">Empresa</option>
-                <option value="Propio">Propio del empleado</option>
+              <label>Conexión / Tipo Ratón</label>
+              <select id="monRaton">
+                <option value="USB">USB</option>
+                <option value="BLUETOOTH">BLUETOOTH</option>
+                <option value="PS2">PS2</option>
+                <option value="PERSONAL">PERSONAL (Del empleado)</option>
               </select>
             </div>
           </div>
