@@ -23,7 +23,7 @@ function initMap() {
   });
 
   // URL del plano de tu empresa (puedes reemplazar esta URL por la imagen real de tu plano)
-  const imageUrl = 'https://via.placeholder.com/1920x1080/1e293b/ffffff?text=PLANO+DE+LA+EMPRESA+(Subir+imagen+real)';
+  const imageUrl = '../img/planonv1.png';
 
   // Cargar la imagen del plano sobre las coordenadas
   L.imageOverlay(imageUrl, bounds).addTo(map);
