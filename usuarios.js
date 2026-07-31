@@ -19,7 +19,8 @@ let rolesList = [];
 const MODULOS_SISTEMA = [
   { id: 'index.html', nombre: 'Inicio / Dashboard' },
   { id: 'usuarios.html', nombre: 'Gestión de Usuarios' },
-  { id: 'almacen.html', nombre: 'Gestión de Inventario' }
+  { id: 'almacen.html', nombre: 'Gestión de Inventario' },
+  { id: 'inventario-empresa.html', nombre: 'Inventario de Empresa' }
 ];
 
 // 0. CARGAR ROLES DESDE LA COLECCIÓN 'roles' DE FIRESTORE
