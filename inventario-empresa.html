@@ -9,8 +9,6 @@
   <script type="module" src="inventario-empresa.js"></script>
 </head>
 <body>
-
-  <!-- Header Sticky conforme a tu diseño -->
   <header>
     <a href="index.html" class="brand">
       <div class="brand-icon">T</div>
@@ -30,23 +28,17 @@
     </div>
   </header>
 
-  <!-- Layout Principal -->
   <main>
-    <!-- Botón de retorno al Inicio -->
     <a href="index.html" class="btn-back">&larr; Volver al Panel Principal</a>
 
-    <!-- Header de Sección -->
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
       <div>
         <h2>Inventario General de Empresa</h2>
         <p>Control y asignación de puestos de trabajo, ordenadores, pantallas y periféricos.</p>
       </div>
-      <button onclick="openFormModal()" class="btn-primary">
-        ➕ Nuevo Registro
-      </button>
+      <button onclick="openFormModal()" class="btn-primary">Nuevo Registro</button>
     </div>
 
-    <!-- Barra de Filtros y Búsqueda -->
     <div class="table-controls">
       <div class="search-box" style="flex: 1; min-width: 260px;">
         <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 Buscar por empleado, ID PC, modelo o departamento...">
@@ -62,7 +54,6 @@
       </div>
     </div>
 
-    <!-- Tabla Principal Resumida -->
     <div class="table-container">
       <table class="data-table">
         <thead>
