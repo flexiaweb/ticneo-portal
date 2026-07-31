@@ -102,7 +102,7 @@ async function createNewRole() {
   }
 
   try {
-    // Crear el documento del nuevo rol en Firestore con un array vacio de permisos
+    // Crear el documento del nuevo rol en Firestore con un array vacío de permisos
     await setDoc(doc(db, "roles", newRole), {
       permisos: []
     });
@@ -201,7 +201,7 @@ async function deleteUserDoc(uid) {
   }
 }
 
-// 5. GUARDAR / EDITAR USUARIO EN FIRESTORE (CON BCRYPT)
+// 5. GUARDAR / EDITAR USUARIO EN FIRESTORE (CON BCRYPT Y CAMBIO DE CONTRASEÑA OBLIGATORIO)
 async function saveUser(e) {
   e.preventDefault();
   const uid = document.getElementById('userId').value;
@@ -230,6 +230,8 @@ async function saveUser(e) {
       if (password !== "") {
         const hashedPassword = bcrypt.hashSync(password, 10);
         userData.password = hashedPassword;
+        // 🔒 Si el administrador le resetea la contraseña, obligar a cambiarla en su próximo acceso
+        userData.mustChangePassword = true;
       }
 
       await updateDoc(doc(db, "usuarios", uid), userData);
@@ -245,6 +247,9 @@ async function saveUser(e) {
       // 🔒 Aplicar Hash Bcrypt
       const hashedPassword = bcrypt.hashSync(plainPassword, 10);
       userData.password = hashedPassword;
+
+      // 🔒 Obligar al usuario a cambiar la contraseña en su primer login
+      userData.mustChangePassword = true;
 
       await addDoc(collection(db, "usuarios"), userData);
 
@@ -284,7 +289,7 @@ function editUser(id) {
   if (lblPassword) lblPassword.textContent = 'Resetear Contraseña';
 
   const passwordHelp = document.getElementById('passwordHelp');
-  if (passwordHelp) passwordHelp.textContent = '⚠️ Deja en blanco para mantener la contraseña actual.';
+  if (passwordHelp) passwordHelp.textContent = '⚠️ Deja en blanco para mantener la contraseña actual. Si la reseteas, se obligará al usuario a cambiarla al entrar.';
 
   const modalTitle = document.getElementById('modalTitle');
   if (modalTitle) modalTitle.textContent = "Editar Usuario";
@@ -326,7 +331,7 @@ function openUserModal(reset = true) {
     if (userPassword) userPassword.placeholder = 'Ej. Pass1234!';
 
     const passwordHelp = document.getElementById('passwordHelp');
-    if (passwordHelp) passwordHelp.textContent = 'Si se deja en blanco, se creará una contraseña automática.';
+    if (passwordHelp) passwordHelp.textContent = 'Si se deja en blanco, se creará una contraseña automática. Se requerirá cambio de contraseña en el primer acceso.';
   }
 
   const modal = document.getElementById('userModal');
