@@ -6,6 +6,22 @@ import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 let pendingResetUserId = null;
 let currentTempPasswordInput = '';
 
+// HELPER: Resolver la ruta relativa correcta (raíz vs /pages/)
+function getRelativePath(targetFile) {
+  const path = window.location.pathname.toLowerCase();
+  const isInsidePages = path.includes('/pages/');
+
+  if (targetFile === 'login.html') {
+    return isInsidePages ? '../login.html' : 'login.html';
+  }
+  
+  if (targetFile === 'index.html') {
+    return isInsidePages ? '../index.html' : 'index.html';
+  }
+
+  return targetFile;
+}
+
 // 1. VERIFICAR AUTENTICACIÓN Y PERMISOS DE ACCESO AL CARGAR PÁGINA
 async function checkAuth() {
   const userRaw = localStorage.getItem('ticneo_user');
@@ -14,13 +30,13 @@ async function checkAuth() {
 
   // Redirigir si no hay sesión iniciada y no está en login
   if (!userRaw && !isLoginPage) {
-    window.location.href = 'login.html';
+    window.location.href = getRelativePath('login.html');
     return;
   }
 
   // Redirigir a index si ya inició sesión e intenta entrar a login
   if (userRaw && isLoginPage) {
-    window.location.href = 'index.html';
+    window.location.href = getRelativePath('index.html');
     return;
   }
 
@@ -28,7 +44,7 @@ async function checkAuth() {
   if (userRaw && !isLoginPage) {
     const user = JSON.parse(userRaw);
     
-    // Obtener el nombre del archivo actual (ej. "usuarios.html", "almacen.html")
+    // Obtener el nombre del archivo actual (ej. "usuarios.html", "inventario-empresa.html")
     let currentPage = path.split('/').pop();
     if (!currentPage || currentPage === '') currentPage = 'index.html';
 
@@ -38,7 +54,7 @@ async function checkAuth() {
       alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
       
       if (currentPage !== 'index.html') {
-        window.location.href = 'index.html';
+        window.location.href = getRelativePath('index.html');
       } else {
         logout();
       }
@@ -210,7 +226,7 @@ async function processForcePasswordChange(e) {
     if (tempUser) {
       saveSessionAndRedirect(tempUser);
     } else {
-      window.location.href = 'login.html';
+      window.location.href = getRelativePath('login.html');
     }
 
   } catch (error) {
@@ -231,7 +247,7 @@ function openForceChangePasswordModal(userData) {
   const modal = document.getElementById('forcePasswordModal');
   if (modal) {
     modal.classList.add('active');
-    modal.style.display = 'flex'; // Garantizar visibilidad si usas display inline
+    modal.style.display = 'flex';
   } else {
     // Fallback prompt si el elemento HTML no existe en el DOM
     alert("🔒 Primer inicio de sesión detectado. Debes cambiar tu contraseña.");
@@ -262,14 +278,14 @@ function showResetError(msg) {
 
 function saveSessionAndRedirect(sessionData) {
   localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
-  window.location.href = 'index.html';
+  window.location.href = getRelativePath('index.html');
 }
 
 // 5. CERRAR SESIÓN
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
-  window.location.href = 'login.html';
+  window.location.href = getRelativePath('login.html');
 }
 
 // Renderizar únicamente el nombre del usuario logueado
