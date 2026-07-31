@@ -72,6 +72,40 @@
     </form>
   </div>
 
+  <!-- MODAL CAMBIO OBLIGATORIO DE CONTRASEÑA -->
+  <div id="forcePasswordModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3>🔒 Actualizar Contraseña</h3>
+      </div>
+  
+      <p style="font-size: 0.85rem; color: var(--text-muted, #94a3b8); margin-bottom: 1rem;">
+        Es tu primer inicio de sesión o tu contraseña ha sido reseteada. Por seguridad, debes establecer una contraseña nueva.
+      </p>
+  
+      <div id="resetErrorMsg" style="display: none; color: #f87171; background: rgba(248, 113, 113, 0.1); padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+  
+      <form id="forcePasswordForm" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="form-group">
+          <label>Nueva Contraseña *</label>
+          <input type="password" id="newPasswordInput" required minlength="6" placeholder="Mínimo 6 caracteres">
+        </div>
+  
+        <div class="form-group">
+          <label>Confirmar Nueva Contraseña *</label>
+          <input type="password" id="confirmPasswordInput" required minlength="6" placeholder="Repite la contraseña">
+        </div>
+  
+        <div class="modal-footer" style="margin-top: 0.5rem;">
+          <button type="submit" id="btnSubmitReset" class="btn-primary" style="width: 100%;">
+            Guardar y Entrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
   <script type="module" src="js/auth.js"></script>
 </body>
 
