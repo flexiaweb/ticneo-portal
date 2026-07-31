@@ -12,9 +12,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- Estilos adicionales específicos para el visor del mapa y marcadores -->
+  <!-- Módulos JS de Autenticación y Lógica de Cámaras -->
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/camaras.js"></script>
+
   <style>
-    /* Estilos del Mapa y Marcadores */
+    /* 1. Control de apilamiento para Leaflet */
     .map-wrapper {
       position: relative;
       background: var(--bg-card);
@@ -22,12 +25,31 @@
       border-radius: 16px;
       overflow: hidden;
       box-shadow: var(--shadow-violet);
+      /* Crea un nuevo contexto de apilamiento para mantener a Leaflet atrapado dentro */
+      z-index: 1; 
     }
 
     #map {
       width: 100%;
       height: 600px;
-      background-color: #0c0914; /* Mismo tono oscuro del portal */
+      background-color: #0c0914;
+      z-index: 1; /* Forzamos a que el mapa no suba de z-index */
+    }
+
+    /* Reducimos el z-index de los controles internos de Leaflet para que no superen 100 */
+    .leaflet-pane, 
+    .leaflet-top, 
+    .leaflet-bottom {
+      z-index: 10 !important;
+    }
+
+    /* 2. Forzar a que Header y Modal queden SIEMPRE por encima del mapa */
+    header {
+      z-index: 100 !important; /* Estaba en 10 */
+    }
+
+    .modal-overlay {
+      z-index: 2000 !important; /* Estaba en 100, ahora supera cualquier capa de Leaflet */
     }
 
     /* Marcador de cámara interactivo en el mapa */
@@ -78,7 +100,7 @@
       position: absolute;
       top: 15px;
       right: 15px;
-      z-index: 1000;
+      z-index: 50; /* Ajustado para estar dentro de la caja pero sobre el mapa */
       background: rgba(22, 16, 38, 0.9);
       border: 1px solid var(--border-color);
       padding: 0.5rem 1rem;
@@ -89,10 +111,6 @@
       display: none;
     }
   </style>
-
-  <!-- Módulos JS de Autenticación y Lógica de Cámaras -->
-  <script type="module" src="../js/auth.js"></script>
-  <script type="module" src="../js/camaras.js"></script>
 </head>
 <body>
 
