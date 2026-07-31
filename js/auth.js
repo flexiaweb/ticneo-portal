@@ -2,7 +2,7 @@
 import { db, collection, getDocs, doc, getDoc, updateDoc, query, where } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
-// Variable global para guardar el ID y la contraseña ingresada temporalmente durante el reseteo
+// Variables globales para guardar el ID y la contraseña temporal
 let pendingResetUserId = null;
 let currentTempPasswordInput = '';
 
@@ -35,13 +35,11 @@ async function checkAuth() {
     const tienePermiso = await verificarPermisoRol(user.rol, currentPage);
 
     if (!tienePermiso) {
-      alert("⚠️ No tienes permisos asignados para acceder al módulo");
+      alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
       
-      // Si se le deniega el acceso y no está en index, lo regresamos al inicio
-      if (currentPage !== '../index.html') {
-        window.location.href = '../index.html';
+      if (currentPage !== 'index.html') {
+        window.location.href = 'index.html';
       } else {
-        // Si no tiene permiso ni para la página principal, cerramos sesión
         logout();
       }
     }
@@ -50,7 +48,6 @@ async function checkAuth() {
 
 // FUNCION AUXILIAR PARA CONSULTAR PERMISOS EN FIRESTORE
 async function verificarPermisoRol(rol, paginaActual) {
-  // El rol 'admin' siempre tiene acceso a todo por defecto
   if (rol === 'admin') return true;
 
   try {
@@ -62,7 +59,6 @@ async function verificarPermisoRol(rol, paginaActual) {
       return permisos.includes(paginaActual);
     }
 
-    // Si el rol no existe aún en Firestore, bloqueamos por seguridad
     return false;
   } catch (error) {
     console.error("Error al verificar permisos del rol en Firestore:", error);
@@ -97,10 +93,9 @@ async function loginUser(email, password) {
       throw new Error("El correo electrónico no está registrado.");
     }
 
-    let userFound = null;
-    querySnapshot.forEach((docSnap) => {
-      userFound = { id: docSnap.id, ...docSnap.data() };
-    });
+    // Tomar el primer documento encontrado
+    const docSnap = querySnapshot.docs[0];
+    const userFound = { id: docSnap.id, ...docSnap.data() };
 
     // 🔒 VERIFICACIÓN DE CONTRASEÑA VÍA BCRYPT
     const isPasswordValid = bcrypt.compareSync(password, userFound.password);
@@ -113,10 +108,14 @@ async function loginUser(email, password) {
       throw new Error("Esta cuenta se encuentra inactiva o bloqueada.");
     }
 
-    // 🔑 VERIFICAR SI REQUIERE CAMBIO OBLIGATORIO DE CONTRASEÑA
-    if (userFound.mustChangePassword === true) {
+    // 🔑 VERIFICAR SI REQUIERE CAMBIO OBLIGATORIO DE CONTRASEÑA (Evaluación flexible)
+    const needsPasswordChange = userFound.mustChangePassword === true || 
+                                userFound.mustChangePassword === 'true' || 
+                                userFound.mustChangePassword === 1;
+
+    if (needsPasswordChange) {
       pendingResetUserId = userFound.id;
-      currentTempPasswordInput = password; // Almacenamos la clave ingresada para verificar que no la repita
+      currentTempPasswordInput = password; // Guardamos la clave escrita para evitar que ponga la misma
       
       const sessionDataTemp = {
         id: userFound.id,
@@ -125,12 +124,11 @@ async function loginUser(email, password) {
         rol: userFound.rol
       };
 
-      // Invocamos la ventana/modal para resetear contraseña obligatoriamente
       openForceChangePasswordModal(sessionDataTemp);
       return;
     }
 
-    // Si no requiere cambio, crear sesión estándar y redirigir
+    // Si no requiere cambio, crear sesión y entrar
     saveSessionAndRedirect({
       id: userFound.id,
       nombre: userFound.nombre,
@@ -177,7 +175,12 @@ async function processForcePasswordChange(e) {
   }
 
   if (newPass === currentTempPasswordInput) {
-    showResetError("La nueva contraseña debe ser diferente a la contraseña temporal actual.");
+    showResetError("La nueva contraseña debe ser diferente a la contraseña actual.");
+    return;
+  }
+
+  if (!pendingResetUserId) {
+    showResetError("Error de sesión. Por favor recarga la página e intenta de nuevo.");
     return;
   }
 
@@ -190,20 +193,25 @@ async function processForcePasswordChange(e) {
     // Hashear nueva contraseña
     const newHashedPassword = bcrypt.hashSync(newPass, 10);
 
-    // Actualizar usuario en Firestore
+    // Actualizar documento del usuario en Firestore
     const userRef = doc(db, "usuarios", pendingResetUserId);
     await updateDoc(userRef, {
       password: newHashedPassword,
       mustChangePassword: false
     });
 
-    alert("✅ ¡Contraseña actualizada con éxito! Accediendo al portal...");
+    alert("✅ ¡Contraseña actualizada con éxito! Entrando al sistema...");
     
-    // Recuperar datos temporales y guardar sesión definitiva
-    const tempUser = JSON.parse(sessionStorage.getItem('ticneo_temp_user'));
+    // Obtener sesión temporal guardada
+    const tempUserRaw = sessionStorage.getItem('ticneo_temp_user');
+    const tempUser = tempUserRaw ? JSON.parse(tempUserRaw) : null;
     sessionStorage.removeItem('ticneo_temp_user');
 
-    saveSessionAndRedirect(tempUser);
+    if (tempUser) {
+      saveSessionAndRedirect(tempUser);
+    } else {
+      window.location.href = 'login.html';
+    }
 
   } catch (error) {
     console.error("Error al actualizar la contraseña:", error);
@@ -223,11 +231,12 @@ function openForceChangePasswordModal(userData) {
   const modal = document.getElementById('forcePasswordModal');
   if (modal) {
     modal.classList.add('active');
+    modal.style.display = 'flex'; // Garantizar visibilidad si usas display inline
   } else {
-    // Si no existe el modal en el HTML, alertar y usar prompt de respaldo
+    // Fallback prompt si el elemento HTML no existe en el DOM
     alert("🔒 Primer inicio de sesión detectado. Debes cambiar tu contraseña.");
     const newPassword = prompt("Introduce tu nueva contraseña (mínimo 6 caracteres):");
-    if (newPassword && newPassword.trim() !== currentTempPasswordInput && newPassword.length >= 6) {
+    if (newPassword && newPassword.trim() !== currentTempPasswordInput && newPassword.trim().length >= 6) {
       const newHashedPassword = bcrypt.hashSync(newPassword.trim(), 10);
       updateDoc(doc(db, "usuarios", userData.id), {
         password: newHashedPassword,
@@ -236,7 +245,7 @@ function openForceChangePasswordModal(userData) {
         saveSessionAndRedirect(userData);
       });
     } else {
-      alert("Contraseña no válida o igual a la anterior.");
+      alert("Contraseña inválida o no cumple las condiciones.");
     }
   }
 }
@@ -260,10 +269,10 @@ function saveSessionAndRedirect(sessionData) {
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
-  window.location.href = '../login.html';
+  window.location.href = 'login.html';
 }
 
-// Función para renderizar ÚNICAMENTE el nombre del usuario logueado
+// Renderizar únicamente el nombre del usuario logueado
 function displayLoggedUser() {
   const userDisplay = document.getElementById('userInfoDisplay');
   if (!userDisplay) return;
@@ -301,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Exponer funciones globales al objeto window
+// Exponer funciones globales
 window.logout = logout;
 window.loginUser = loginUser;
 
