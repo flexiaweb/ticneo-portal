@@ -1,4 +1,4 @@
-// auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol
+// auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol//
 import { db, collection, getDocs, doc, getDoc, updateDoc, query, where } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
