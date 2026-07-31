@@ -11,17 +11,17 @@ import {
   orderBy
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-// Variable global para almacenar los registros cargados
+// Variable global para almacenar registros
 let inventoryData = [];
 
-// Colección en Firestore
+// Nombre de la colección en Firestore
 const INVENTORY_COLLECTION = 'inventario_empresa';
 
 // Al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
   loadInventory();
   
-  // Asignar funciones al objeto global window para invocarlas desde el HTML
+  // Exponer funciones al objeto global window para botones HTML
   window.openFormModal = openFormModal;
   window.closeFormModal = closeFormModal;
   window.closeDetailModal = closeDetailModal;
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Carga los registros de Firestore ordenados por fecha de creación
+ * Carga los registros de Firestore
  */
 async function loadInventory() {
   const tbody = document.getElementById('inventoryTableBody');
@@ -52,19 +52,19 @@ async function loadInventory() {
     renderTable(inventoryData);
   } catch (error) {
     console.error('Error al cargar inventario:', error);
-    tbody.innerHTML = `<tr><td colspan="7" style="color: #f87171; text-align: center; padding: 1.5rem;">Error al cargar datos. Verifique los permisos de Firestore.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="color: #f87171; text-align: center; padding: 1.5rem;">Error al cargar datos. Verifique permisos en Firestore.</td></tr>`;
   }
 }
 
 /**
- * Renderiza la tabla principal con los datos proporcionados
+ * Renderiza la tabla principal
  */
 function renderTable(data) {
   const tbody = document.getElementById('inventoryTableBody');
   tbody.innerHTML = '';
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No se encontraron registros de equipamiento.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No se encontraron registros.</td></tr>`;
     return;
   }
 
@@ -76,7 +76,7 @@ function renderTable(data) {
     const statusBadgeClass = isStock ? 'badge-role role-admin' : 'badge-role role-user';
     const statusText = isStock ? '📦 En stock (Almacén)' : '💻 En uso';
 
-    // Construir texto de pantallas de forma dinámica
+    // Construir texto de pantallas
     const numPantallasStr = String(item.pantallasNum || "0");
     let pantallasDisplay = 'Sin pantallas';
     if (numPantallasStr === "1") {
@@ -85,14 +85,13 @@ function renderTable(data) {
       pantallasDisplay = `2x (${item.p1Modelo || ''} / ${item.p2Modelo || ''})`;
     }
 
-    // Formatear periféricos con color diferenciado si es PERSONAL
+    // Badges de teclado y ratón
     const tecladoBadge = getPeripheralBadge(item.monTeclado || 'USB', 'Tcl');
     const ratonBadge = getPeripheralBadge(item.monRaton || 'USB', 'Rat');
 
     tr.innerHTML = `
       <td>
         <div style="font-weight: 600; color: #fff;">${escapeHTML(item.empNombre || 'Sin asignar')}</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHTML(item.empEmail || '')}</div>
       </td>
       <td>
         <div>${escapeHTML(item.empDpto || 'N/A')}</div>
@@ -120,7 +119,7 @@ function renderTable(data) {
 }
 
 /**
- * Retorna un HTML con badge formateado. Si es PERSONAL resalta en color naranja/amarillo
+ * Retorna badge para periféricos. Si es PERSONAL resalta en color amarillo/naranja
  */
 function getPeripheralBadge(tipo, label) {
   const isPersonal = String(tipo).toUpperCase() === 'PERSONAL';
@@ -132,10 +131,10 @@ function getPeripheralBadge(tipo, label) {
 }
 
 /**
- * Controla la visibilidad de las cajas de pantalla según pantallasNum ("0", "1", "2")
+ * Controla visibilidad de campos de pantalla según pantallasNum ("0", "1", "2")
  */
 function toggleScreensInputs() {
-  const val = document.getElementById('pantallasNum').value; // Retorna "0", "1", "2"
+  const val = document.getElementById('pantallasNum').value;
   const block1 = document.getElementById('pantalla1Block');
   const block2 = document.getElementById('pantalla2Block');
 
@@ -152,7 +151,7 @@ function toggleScreensInputs() {
 }
 
 /**
- * Abrir Modal de Formulario (Crear)
+ * Abrir Modal de Formulario
  */
 function openFormModal() {
   document.getElementById('equipForm').reset();
@@ -174,7 +173,7 @@ function closeDetailModal() {
 }
 
 /**
- * Muestra el modal con los detalles completos del registro
+ * Ficha de detalle completo
  */
 function viewDetail(id) {
   const item = inventoryData.find(rec => rec.id === id);
@@ -185,7 +184,6 @@ function viewDetail(id) {
 
   detailTitle.innerText = `Ficha de Puesto: ${item.empNombre || item.pcId}`;
 
-  // Lógica para renderizar pantallas únicamente si existen según pantallasNum ("1" o "2")
   const numP = String(item.pantallasNum || "0");
   let pantallasHTML = '<span style="color: var(--text-muted);">Sin pantallas de empresa asignadas</span>';
 
@@ -198,36 +196,25 @@ function viewDetail(id) {
     `;
   }
 
-  // Estilos de teclado y ratón
-  const tecladoEstilo = String(item.monTeclado).toUpperCase() === 'PERSONAL' 
-    ? 'color: #fbbf24; font-weight: bold;' 
-    : '';
-  const ratonEstilo = String(item.monRaton).toUpperCase() === 'PERSONAL' 
-    ? 'color: #fbbf24; font-weight: bold;' 
-    : '';
+  const tecladoEstilo = String(item.monTeclado).toUpperCase() === 'PERSONAL' ? 'color: #fbbf24; font-weight: bold;' : '';
+  const ratonEstilo = String(item.monRaton).toUpperCase() === 'PERSONAL' ? 'color: #fbbf24; font-weight: bold;' : '';
 
   detailBody.innerHTML = `
-    <div style="grid-column: 1 / -1; background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
-      <h4 style="color: var(--primary-light); margin-bottom: 0.4rem;">👤 Datos del Empleado</h4>
+    <div style="background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
+      <h4 style="color: var(--primary-light); margin-bottom: 0.4rem;">👤 Empleado y Ordenador</h4>
       <div><strong>Nombre:</strong> ${escapeHTML(item.empNombre || 'N/A')}</div>
-      <div><strong>Email:</strong> ${escapeHTML(item.empEmail || 'N/A')}</div>
+      <div><strong>ID PC:</strong> <strong style="color: var(--primary-light);">${escapeHTML(item.pcId || 'N/A')}</strong></div>
+      <div><strong>Marca y Modelo:</strong> ${escapeHTML(item.pcModelo || 'N/A')}</div>
       <div><strong>Departamento:</strong> ${escapeHTML(item.empDpto || 'N/A')}</div>
       <div><strong>Ubicación/Mesa:</strong> ${escapeHTML(item.empZona || 'N/A')}</div>
     </div>
 
-    <div style="grid-column: 1 / -1; background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
-      <h4 style="color: var(--primary-light); margin-bottom: 0.4rem;">💻 Ordenador Principal</h4>
-      <div><strong>ID Inventario PC:</strong> ${escapeHTML(item.pcId || 'N/A')}</div>
-      <div><strong>Modelo:</strong> ${escapeHTML(item.pcModelo || 'N/A')}</div>
-      <div><strong>Nº de Serie PC:</strong> ${escapeHTML(item.pcSerie || 'N/A')}</div>
-    </div>
-
-    <div style="grid-column: 1 / -1; background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
+    <div style="background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
       <h4 style="color: var(--primary-light); margin-bottom: 0.4rem;">🖥️ Monitores (${numP})</h4>
       ${pantallasHTML}
     </div>
 
-    <div style="grid-column: 1 / -1; background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
+    <div style="background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px;">
       <h4 style="color: var(--primary-light); margin-bottom: 0.4rem;">⌨️ Periféricos y Estado</h4>
       <div><strong>Teclado:</strong> <span style="${tecladoEstilo}">${escapeHTML(item.monTeclado || 'USB')}</span></div>
       <div><strong>Ratón:</strong> <span style="${ratonEstilo}">${escapeHTML(item.monRaton || 'USB')}</span></div>
@@ -241,7 +228,7 @@ function viewDetail(id) {
 }
 
 /**
- * Guardar o Actualizar Registro en Firestore
+ * Guardar o Actualizar
  */
 async function saveEquipment(e) {
   e.preventDefault();
@@ -250,18 +237,15 @@ async function saveEquipment(e) {
   btnSave.innerText = 'Guardando...';
 
   const recordId = document.getElementById('recordId').value;
-  const pantallasNumStr = document.getElementById('pantallasNum').value; // Recibe "0", "1" o "2"
+  const pantallasNumStr = document.getElementById('pantallasNum').value;
 
-  // Construir objeto base
   const payload = {
-    empEmail: document.getElementById('empEmail').value.trim(),
     empNombre: document.getElementById('empNombre').value.trim(),
     empDpto: document.getElementById('empDpto').value.trim(),
     empZona: document.getElementById('empZona').value.trim(),
     pcId: document.getElementById('pcId').value.trim(),
     pcModelo: document.getElementById('pcModelo').value.trim(),
-    pcSerie: document.getElementById('pcSerie').value.trim(),
-    pantallasNum: pantallasNumStr, // Siempre String ("0", "1", "2")
+    pantallasNum: pantallasNumStr,
     monTeclado: document.getElementById('monTeclado').value,
     monRaton: document.getElementById('monRaton').value,
     accesorios: document.getElementById('accesorios').value.trim(),
@@ -270,26 +254,22 @@ async function saveEquipment(e) {
     updatedAt: serverTimestamp()
   };
 
-  // Asignar condicionalmente los campos de pantallas según el String seleccionado
   if (pantallasNumStr === "1") {
     payload.p1Modelo = document.getElementById('p1Modelo').value.trim();
-    payload.p2Modelo = ""; // Limpiar si antes tenía 2
+    payload.p2Modelo = "";
   } else if (pantallasNumStr === "2") {
     payload.p1Modelo = document.getElementById('p1Modelo').value.trim();
     payload.p2Modelo = document.getElementById('p2Modelo').value.trim();
   } else {
-    // Si es "0", no guardamos o limpiamos modelos
     payload.p1Modelo = "";
     payload.p2Modelo = "";
   }
 
   try {
     if (recordId) {
-      // Actualización
       const docRef = doc(db, INVENTORY_COLLECTION, recordId);
       await updateDoc(docRef, payload);
     } else {
-      // Creación
       payload.createdAt = serverTimestamp();
       await addDoc(collection(db, INVENTORY_COLLECTION), payload);
     }
@@ -297,8 +277,8 @@ async function saveEquipment(e) {
     closeFormModal();
     await loadInventory();
   } catch (error) {
-    console.error('Error al guardar el equipo:', error);
-    alert('Ocurrió un error al guardar el registro en Firestore.');
+    console.error('Error al guardar:', error);
+    alert('Ocurrió un error al guardar el registro.');
   } finally {
     btnSave.disabled = false;
     btnSave.innerText = 'Guardar Registro';
@@ -306,23 +286,20 @@ async function saveEquipment(e) {
 }
 
 /**
- * Cargar datos en el formulario para Editar
+ * Cargar datos para Editar
  */
 function editRecord(id) {
   const item = inventoryData.find(rec => rec.id === id);
   if (!item) return;
 
   document.getElementById('recordId').value = item.id;
-  document.getElementById('empEmail').value = item.empEmail || '';
   document.getElementById('empNombre').value = item.empNombre || '';
   document.getElementById('empDpto').value = item.empDpto || '';
   document.getElementById('empZona').value = item.empZona || '';
   
   document.getElementById('pcId').value = item.pcId || '';
   document.getElementById('pcModelo').value = item.pcModelo || '';
-  document.getElementById('pcSerie').value = item.pcSerie || '';
 
-  // Asegurar formato String para pantallasNum
   const numPStr = String(item.pantallasNum || "0");
   document.getElementById('pantallasNum').value = numPStr;
   toggleScreensInputs();
@@ -347,19 +324,19 @@ async function deleteRecord(id) {
   const item = inventoryData.find(rec => rec.id === id);
   if (!item) return;
 
-  if (confirm(`¿Estás seguro de que deseas eliminar la asignación de ${item.empNombre || item.pcId}?`)) {
+  if (confirm(`¿Estás seguro de que deseas eliminar el registro de ${item.empNombre || item.pcId}?`)) {
     try {
       await deleteDoc(doc(db, INVENTORY_COLLECTION, id));
       await loadInventory();
     } catch (error) {
-      console.error('Error al eliminar registro:', error);
+      console.error('Error al eliminar:', error);
       alert('No se pudo eliminar el registro.');
     }
   }
 }
 
 /**
- * Filtro de Búsqueda y Estado en tiempo real
+ * Filtro de búsqueda en tiempo real
  */
 function filterTable() {
   const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -368,7 +345,6 @@ function filterTable() {
   const filtered = inventoryData.filter(item => {
     const matchesSearch = 
       (item.empNombre && item.empNombre.toLowerCase().includes(searchValue)) ||
-      (item.empEmail && item.empEmail.toLowerCase().includes(searchValue)) ||
       (item.pcId && item.pcId.toLowerCase().includes(searchValue)) ||
       (item.pcModelo && item.pcModelo.toLowerCase().includes(searchValue)) ||
       (item.empDpto && item.empDpto.toLowerCase().includes(searchValue));
@@ -382,7 +358,7 @@ function filterTable() {
 }
 
 /**
- * Utilidad de Sanitización básica para evitar inyecciones XSS en el HTML
+ * Escape HTML
  */
 function escapeHTML(str) {
   if (!str) return '';
