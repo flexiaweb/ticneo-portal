@@ -110,6 +110,35 @@
       backdrop-filter: blur(8px);
       display: none;
     }
+    /* Selector de Naves (Pestañas estilo Portal) */
+    .nave-selector-container {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .btn-nave {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-nave:hover {
+      border-color: var(--accent-violet);
+      color: var(--text-main);
+    }
+    
+    .btn-nave.active {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.1));
+      border-color: var(--accent-violet);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -163,6 +192,16 @@
         <span class="kpi-title">Inactivas / Caídas</span>
         <span class="kpi-value salida" id="kpiCamarasInactivas">0</span>
       </div>
+    </div>
+
+    <!-- Selector de Nave / Plano -->
+    <div class="nave-selector-container">
+      <button type="button" class="btn-nave active" onclick="cambiarNave('nave1')">
+        🏢 Nave 1 (Principal)
+      </button>
+      <button type="button" class="btn-nave" onclick="cambiarNave('nave2')">
+        🏭 Nave 2 (Anexo / Logística)
+      </button>
     </div>
 
     <!-- Contenedor del Mapa / Plano Interactivo -->
