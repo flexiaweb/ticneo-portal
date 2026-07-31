@@ -1,6 +1,10 @@
-// auth.js - Gestión de Sesión, Autenticación con Bcrypt y Control de Permisos por Rol
-import { db, collection, getDocs, doc, getDoc, query, where } from './firebase-config.js';
+// auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol
+import { db, collection, getDocs, doc, getDoc, updateDoc, query, where } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
+
+// Variable global para guardar el ID y la contraseña ingresada temporalmente durante el reseteo
+let pendingResetUserId = null;
+let currentTempPasswordInput = '';
 
 // 1. VERIFICAR AUTENTICACIÓN Y PERMISOS DE ACCESO AL CARGAR PÁGINA
 async function checkAuth() {
@@ -69,7 +73,7 @@ async function verificarPermisoRol(rol, paginaActual) {
 // Ejecutar la verificación inmediatamente
 checkAuth();
 
-// 2. INICIAR SESIÓN CON VERIFICACIÓN EXCLUSIVA DE BCRYPT
+// 2. INICIAR SESIÓN CON VERIFICACIÓN EXCLUSIVA DE BCRYPT Y CAMBIO DE CONTRASEÑA
 async function loginUser(email, password) {
   const errorMsg = document.getElementById('errorMsg');
   const btnLogin = document.querySelector('button[type="submit"]');
@@ -109,17 +113,30 @@ async function loginUser(email, password) {
       throw new Error("Esta cuenta se encuentra inactiva o bloqueada.");
     }
 
-    const sessionData = {
+    // 🔑 VERIFICAR SI REQUIERE CAMBIO OBLIGATORIO DE CONTRASEÑA
+    if (userFound.mustChangePassword === true) {
+      pendingResetUserId = userFound.id;
+      currentTempPasswordInput = password; // Almacenamos la clave ingresada para verificar que no la repita
+      
+      const sessionDataTemp = {
+        id: userFound.id,
+        nombre: userFound.nombre,
+        email: userFound.email,
+        rol: userFound.rol
+      };
+
+      // Invocamos la ventana/modal para resetear contraseña obligatoriamente
+      openForceChangePasswordModal(sessionDataTemp);
+      return;
+    }
+
+    // Si no requiere cambio, crear sesión estándar y redirigir
+    saveSessionAndRedirect({
       id: userFound.id,
       nombre: userFound.nombre,
       email: userFound.email,
       rol: userFound.rol
-    };
-
-    localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
-
-    // Redirigir al panel principal
-    window.location.href = 'index.html';
+    });
 
   } catch (error) {
     console.error("Error en el inicio de sesión:", error);
@@ -138,7 +155,108 @@ async function loginUser(email, password) {
   }
 }
 
-// 3. CERRAR SESIÓN
+// 3. PROCESAR EL CAMBIO OBLIGATORIO DE CONTRASEÑA
+async function processForcePasswordChange(e) {
+  e.preventDefault();
+  const newPass = document.getElementById('newPasswordInput').value.trim();
+  const confirmPass = document.getElementById('confirmPasswordInput').value.trim();
+  const errorResetMsg = document.getElementById('resetErrorMsg');
+  const btnReset = document.getElementById('btnSubmitReset');
+
+  if (errorResetMsg) errorResetMsg.style.display = 'none';
+
+  // Validaciones
+  if (newPass.length < 6) {
+    showResetError("La nueva contraseña debe tener al menos 6 caracteres.");
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    showResetError("Las contraseñas no coinciden.");
+    return;
+  }
+
+  if (newPass === currentTempPasswordInput) {
+    showResetError("La nueva contraseña debe ser diferente a la contraseña temporal actual.");
+    return;
+  }
+
+  if (btnReset) {
+    btnReset.disabled = true;
+    btnReset.textContent = 'Actualizando...';
+  }
+
+  try {
+    // Hashear nueva contraseña
+    const newHashedPassword = bcrypt.hashSync(newPass, 10);
+
+    // Actualizar usuario en Firestore
+    const userRef = doc(db, "usuarios", pendingResetUserId);
+    await updateDoc(userRef, {
+      password: newHashedPassword,
+      mustChangePassword: false
+    });
+
+    alert("✅ ¡Contraseña actualizada con éxito! Accediendo al portal...");
+    
+    // Recuperar datos temporales y guardar sesión definitiva
+    const tempUser = JSON.parse(sessionStorage.getItem('ticneo_temp_user'));
+    sessionStorage.removeItem('ticneo_temp_user');
+
+    saveSessionAndRedirect(tempUser);
+
+  } catch (error) {
+    console.error("Error al actualizar la contraseña:", error);
+    showResetError("Error al guardar la nueva contraseña: " + error.message);
+  } finally {
+    if (btnReset) {
+      btnReset.disabled = false;
+      btnReset.textContent = 'Guardar y Entrar';
+    }
+  }
+}
+
+// 4. FUNCIONES AUXILIARES PARA EL MODAL DE RESETEO
+function openForceChangePasswordModal(userData) {
+  sessionStorage.setItem('ticneo_temp_user', JSON.stringify(userData));
+  
+  const modal = document.getElementById('forcePasswordModal');
+  if (modal) {
+    modal.classList.add('active');
+  } else {
+    // Si no existe el modal en el HTML, alertar y usar prompt de respaldo
+    alert("🔒 Primer inicio de sesión detectado. Debes cambiar tu contraseña.");
+    const newPassword = prompt("Introduce tu nueva contraseña (mínimo 6 caracteres):");
+    if (newPassword && newPassword.trim() !== currentTempPasswordInput && newPassword.length >= 6) {
+      const newHashedPassword = bcrypt.hashSync(newPassword.trim(), 10);
+      updateDoc(doc(db, "usuarios", userData.id), {
+        password: newHashedPassword,
+        mustChangePassword: false
+      }).then(() => {
+        saveSessionAndRedirect(userData);
+      });
+    } else {
+      alert("Contraseña no válida o igual a la anterior.");
+    }
+  }
+}
+
+function showResetError(msg) {
+  const errorResetMsg = document.getElementById('resetErrorMsg');
+  if (errorResetMsg) {
+    errorResetMsg.textContent = "⚠️ " + msg;
+    errorResetMsg.style.display = 'block';
+  } else {
+    alert("⚠️ " + msg);
+  }
+}
+
+function saveSessionAndRedirect(sessionData) {
+  localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
+  window.location.href = 'index.html';
+}
+
+// 5. CERRAR SESIÓN
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
@@ -159,12 +277,11 @@ function displayLoggedUser() {
   }
 }
 
-// 4. CAPTURA AUTOMÁTICA DEL FORMULARIO EN LOGIN.HTML
+// 6. CAPTURA DE FORMULARIOS EN EL DOM
 document.addEventListener('DOMContentLoaded', () => {
   displayLoggedUser();
   
   const loginForm = document.getElementById('loginForm');
-
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -176,6 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await loginUser(emailInput.value, passwordInput.value);
       }
     });
+  }
+
+  const resetForm = document.getElementById('forcePasswordForm');
+  if (resetForm) {
+    resetForm.addEventListener('submit', processForcePasswordChange);
   }
 });
 
