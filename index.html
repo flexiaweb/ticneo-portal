@@ -23,9 +23,14 @@
         <p>Departamento de Sistemas</p>
       </div>
     </a>
-    <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-      🚪 Salir
-    </button>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="userInfoDisplay" style="color: #94a3b8; font-size: 0.85rem;">
+        <!-- Se rellenará dinámicamente con JS -->
+      </span>
+      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+        🚪 Salir
+      </button>
+    </div>
   </header>
 
   <main>
