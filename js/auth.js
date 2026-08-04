@@ -297,7 +297,7 @@ function displayLoggedUser() {
     const user = JSON.parse(userRaw);
     const nombre = user.nombre || user.email || 'Usuario';
 
-    userDisplay.innerHTML = `👤 <strong style="color: #fff;">${nombre}</strong>`;
+    userDisplay.innerHTML = `<span style="color: #0b0914;">${nombre}</span>`;
   }
 }
 
