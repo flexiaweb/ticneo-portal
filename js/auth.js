@@ -1,4 +1,4 @@
-// auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol//
+// auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol
 import { db, collection, getDocs, doc, getDoc, updateDoc, query, where } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
@@ -6,17 +6,19 @@ import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 let pendingResetUserId = null;
 let currentTempPasswordInput = '';
 
-// HELPER: Resolver la ruta relativa correcta (raíz vs /pages/)
+// HELPER: Resolver la ruta relativa correcta según el destino (index.html en raíz vs páginas en /pages/)
 function getRelativePath(targetFile) {
   const path = window.location.pathname.toLowerCase();
   const isInsidePages = path.includes('/pages/');
 
-  if (targetFile === 'login.html') {
-    return isInsidePages ? '../login.html' : 'login.html';
-  }
-  
+  // Si el destino es el Login (raíz index.html)
   if (targetFile === 'index.html') {
     return isInsidePages ? '../index.html' : 'index.html';
+  }
+  
+  // Si el destino es el Dashboard (/pages/dashboard.html)
+  if (targetFile === 'dashboard.html') {
+    return isInsidePages ? 'dashboard.html' : 'pages/dashboard.html';
   }
 
   return targetFile;
@@ -26,17 +28,19 @@ function getRelativePath(targetFile) {
 async function checkAuth() {
   const userRaw = localStorage.getItem('ticneo_user');
   const path = window.location.pathname.toLowerCase();
-  const isLoginPage = path.includes('login.html') || path.endsWith('/login') || path.endsWith('/');
+  
+  // La página de login ahora es la raíz (/) o index.html
+  const isLoginPage = path.endsWith('/') || path.endsWith('/index.html');
 
-  // Redirigir si no hay sesión iniciada y no está en login
+  // Redirigir si no hay sesión iniciada y no está en la página de login (index.html)
   if (!userRaw && !isLoginPage) {
-    window.location.href = getRelativePath('login.html');
+    window.location.href = getRelativePath('index.html');
     return;
   }
 
-  // Redirigir a index si ya inició sesión e intenta entrar a login
+  // Redirigir al Dashboard si ya inició sesión e intenta entrar al login (index.html)
   if (userRaw && isLoginPage) {
-    window.location.href = getRelativePath('index.html');
+    window.location.href = getRelativePath('dashboard.html');
     return;
   }
 
@@ -44,17 +48,17 @@ async function checkAuth() {
   if (userRaw && !isLoginPage) {
     const user = JSON.parse(userRaw);
     
-    // Obtener el nombre del archivo actual (ej. "usuarios.html", "inventario-empresa.html")
+    // Obtener el nombre del archivo actual (ej. "dashboard.html", "camaras.html")
     let currentPage = path.split('/').pop();
-    if (!currentPage || currentPage === '') currentPage = 'index.html';
+    if (!currentPage || currentPage === '') currentPage = 'dashboard.html';
 
     const tienePermiso = await verificarPermisoRol(user.rol, currentPage);
 
     if (!tienePermiso) {
       alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
       
-      if (currentPage !== 'index.html') {
-        window.location.href = getRelativePath('index.html');
+      if (currentPage !== 'dashboard.html') {
+        window.location.href = getRelativePath('dashboard.html');
       } else {
         logout();
       }
@@ -62,7 +66,7 @@ async function checkAuth() {
   }
 }
 
-// FUNCION AUXILIAR PARA CONSULTAR PERMISOS EN FIRESTORE
+// FUNCIÓN AUXILIAR PARA CONSULTAR PERMISOS EN FIRESTORE
 async function verificarPermisoRol(rol, paginaActual) {
   if (rol === 'admin') return true;
 
@@ -109,7 +113,6 @@ async function loginUser(email, password) {
       throw new Error("El correo electrónico no está registrado.");
     }
 
-    // Tomar el primer documento encontrado
     const docSnap = querySnapshot.docs[0];
     const userFound = { id: docSnap.id, ...docSnap.data() };
 
@@ -124,14 +127,14 @@ async function loginUser(email, password) {
       throw new Error("Esta cuenta se encuentra inactiva o bloqueada.");
     }
 
-    // 🔑 VERIFICAR SI REQUIERE CAMBIO OBLIGATORIO DE CONTRASEÑA (Evaluación flexible)
+    // 🔑 VERIFICAR SI REQUIERE CAMBIO OBLIGATORIO DE CONTRASEÑA
     const needsPasswordChange = userFound.mustChangePassword === true || 
                                 userFound.mustChangePassword === 'true' || 
                                 userFound.mustChangePassword === 1;
 
     if (needsPasswordChange) {
       pendingResetUserId = userFound.id;
-      currentTempPasswordInput = password; // Guardamos la clave escrita para evitar que ponga la misma
+      currentTempPasswordInput = password;
       
       const sessionDataTemp = {
         id: userFound.id,
@@ -144,7 +147,7 @@ async function loginUser(email, password) {
       return;
     }
 
-    // Si no requiere cambio, crear sesión y entrar
+    // Si no requiere cambio, crear sesión y redirigir al Dashboard
     saveSessionAndRedirect({
       id: userFound.id,
       nombre: userFound.nombre,
@@ -179,7 +182,6 @@ async function processForcePasswordChange(e) {
 
   if (errorResetMsg) errorResetMsg.style.display = 'none';
 
-  // Validaciones
   if (newPass.length < 6) {
     showResetError("La nueva contraseña debe tener al menos 6 caracteres.");
     return;
@@ -206,10 +208,8 @@ async function processForcePasswordChange(e) {
   }
 
   try {
-    // Hashear nueva contraseña
     const newHashedPassword = bcrypt.hashSync(newPass, 10);
 
-    // Actualizar documento del usuario en Firestore
     const userRef = doc(db, "usuarios", pendingResetUserId);
     await updateDoc(userRef, {
       password: newHashedPassword,
@@ -218,7 +218,6 @@ async function processForcePasswordChange(e) {
 
     alert("✅ ¡Contraseña actualizada con éxito! Entrando al sistema...");
     
-    // Obtener sesión temporal guardada
     const tempUserRaw = sessionStorage.getItem('ticneo_temp_user');
     const tempUser = tempUserRaw ? JSON.parse(tempUserRaw) : null;
     sessionStorage.removeItem('ticneo_temp_user');
@@ -226,7 +225,7 @@ async function processForcePasswordChange(e) {
     if (tempUser) {
       saveSessionAndRedirect(tempUser);
     } else {
-      window.location.href = getRelativePath('login.html');
+      window.location.href = getRelativePath('index.html');
     }
 
   } catch (error) {
@@ -249,7 +248,6 @@ function openForceChangePasswordModal(userData) {
     modal.classList.add('active');
     modal.style.display = 'flex';
   } else {
-    // Fallback prompt si el elemento HTML no existe en el DOM
     alert("🔒 Primer inicio de sesión detectado. Debes cambiar tu contraseña.");
     const newPassword = prompt("Introduce tu nueva contraseña (mínimo 6 caracteres):");
     if (newPassword && newPassword.trim() !== currentTempPasswordInput && newPassword.trim().length >= 6) {
@@ -276,16 +274,17 @@ function showResetError(msg) {
   }
 }
 
+// Guardar sesión y llevar al usuario al Dashboard
 function saveSessionAndRedirect(sessionData) {
   localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
-  window.location.href = getRelativePath('index.html');
+  window.location.href = getRelativePath('dashboard.html');
 }
 
-// 5. CERRAR SESIÓN
+// 5. CERRAR SESIÓN (Lleva de vuelta al Login en index.html)
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
-  window.location.href = getRelativePath('login.html');
+  window.location.href = getRelativePath('index.html');
 }
 
 // Renderizar únicamente el nombre del usuario logueado
