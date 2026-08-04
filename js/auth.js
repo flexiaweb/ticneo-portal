@@ -1,6 +1,7 @@
 // auth.js - Gestión de Sesión, Autenticación con Bcrypt, Cambio Obligatorio de Contraseña y Permisos por Rol
 import { db, collection, getDocs, doc, getDoc, updateDoc, query, where } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
+import { verificarLicenciaUsuario } from './licencia.js';
 
 // Variables globales para guardar el ID y la contraseña temporal
 let pendingResetUserId = null;
@@ -47,6 +48,13 @@ async function checkAuth() {
   // 🔒 VALIDACIÓN DE PERMISOS DINÁMICOS POR ROL EN FIRESTORE
   if (userRaw && !isLoginPage) {
     const user = JSON.parse(userRaw);
+
+    // 1. Verificar si la licencia está activa y vigente
+    const tieneLicenciaValida = await verificarLicenciaUsuario(user.id);
+    if (!tieneLicenciaValida) {
+      // Si la licencia caduco o no existe, el modal se abre bloqueando la pantalla
+      return; 
+    }
     
     // Obtener el nombre del archivo actual (ej. "dashboard.html", "camaras.html")
     let currentPage = path.split('/').pop();
