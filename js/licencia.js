@@ -1,8 +1,47 @@
-// js/licencia.js - Control de Licencias y Expiración en Firestore
+// js/licencia.js - Control de Licencias, Expiración e Inyección Dinámica del Modal
 import { db, doc, getDoc, updateDoc, collection, query, where, getDocs } from './firebase-config.js';
 import { logout } from './auth.js';
 
-// 1. VERIFICAR ESTADO DE LA LICENCIA DEL USUARIO
+// 1. INYECCIÓN DINÁMICA DEL MODAL EN EL DOM
+function asegurarModalEnDOM() {
+  if (document.getElementById('licenciaModal')) return; // Evitar duplicar si ya existe
+
+  const modalHTML = `
+    <div id="licenciaModal" class="modal-overlay" style="display: none; background: rgba(5, 3, 10, 0.92); backdrop-filter: blur(8px); z-index: 9999; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; align-items: center; justify-content: center;">
+      <div class="modal-card" style="max-width: 420px; text-align: center; border-color: var(--accent-violet, #8b5cf6);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔑</div>
+        <h3 style="color: #fff; margin-bottom: 0.5rem;">Licencia requerida</h3>
+        <p id="licenciaStatusText" style="color: var(--text-muted, #94a3b8); font-size: 0.88rem; margin-bottom: 1.5rem;">
+          Tu periodo de acceso ha expirado o tu cuenta no dispone de una licencia activa. Introduce un código válido para continuar.
+        </p>
+
+        <div id="licenciaErrorMsg" style="display: none; color: #f87171; background: rgba(248, 113, 113, 0.1); padding: 0.6rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+        <form id="licenciaForm" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="form-group" style="text-align: left;">
+            <label style="color: #ccc; font-size: 0.85rem;">Código de Licencia *</label>
+            <input type="text" id="inputCodigoLicencia" placeholder="Ej: TICNEO-2026-TRIAL" required style="text-align: center; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;">
+          </div>
+
+          <button type="submit" id="btnActivarLicencia" class="btn-primary" style="width: 100%; justify-content: center;">
+            🔓 Activar y Continuar
+          </button>
+        </form>
+
+        <div style="margin-top: 1.5rem;">
+          <button id="btnLicenciaLogout" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.85rem;">
+            🚪 Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  escucharEventosModal();
+}
+
+// 2. VERIFICAR ESTADO DE LA LICENCIA DEL USUARIO
 export async function verificarLicenciaUsuario(userId) {
   try {
     const userRef = doc(db, "usuarios", userId);
@@ -12,8 +51,8 @@ export async function verificarLicenciaUsuario(userId) {
 
     const userData = userSnap.data();
 
-    // Administradores exentos de licencia (Opcional, eliminar si los admin también necesitan)
-    //if (userData.rol === 'admin') return true;
+    // Descomentar si deseas eximir a los administradores de requerir licencia:
+    // if (userData.rol === 'admin') return true;
 
     // Si no tiene fecha de expiración configurada
     if (!userData.licenciaExpiracion) {
@@ -42,7 +81,7 @@ export async function verificarLicenciaUsuario(userId) {
   }
 }
 
-// 2. ACTIVAR UN CÓDIGO DE LICENCIA
+// 3. ACTIVAR UN CÓDIGO DE LICENCIA
 export async function activarCodigoLicencia(codigoInput, userId) {
   const codigoLimpio = codigoInput.trim().toUpperCase();
 
@@ -62,9 +101,9 @@ export async function activarCodigoLicencia(codigoInput, userId) {
       throw new Error("Este código de licencia ya ha sido utilizado.");
     }
 
-    // Calcular fechas
+    // Calcular fechas dinámicamente según diasDuracion (number/int64)
     const ahora = new Date();
-    const dias = licenciaData.diasDuracion || 30;
+    const dias = Number(licenciaData.diasDuracion) || 30;
     const fechaExpiracion = new Date();
     fechaExpiracion.setDate(ahora.getDate() + dias);
 
@@ -92,8 +131,10 @@ export async function activarCodigoLicencia(codigoInput, userId) {
   }
 }
 
-// FUNCIONES AUXILIARES PARA EL MODAL
+// 4. FUNCIONES AUXILIARES DE CONTROL DEL MODAL
 function mostrarModalLicencia(mensaje) {
+  asegurarModalEnDOM();
+  
   const modal = document.getElementById('licenciaModal');
   const statusText = document.getElementById('licenciaStatusText');
   
@@ -112,9 +153,14 @@ function ocultarModalLicencia() {
   }
 }
 
-// CAPTURAR EL FORMULARIO EN EL DOM
-document.addEventListener('DOMContentLoaded', () => {
+// 5. ESCUCHAR EVENTOS DEL FORMULARIO Y CERRAR SESIÓN
+function escucharEventosModal() {
   const licenciaForm = document.getElementById('licenciaForm');
+  const btnLogout = document.getElementById('btnLicenciaLogout');
+
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => logout());
+  }
 
   if (licenciaForm) {
     licenciaForm.addEventListener('submit', async (e) => {
@@ -151,4 +197,4 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-});
+}
