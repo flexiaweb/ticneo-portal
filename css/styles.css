@@ -697,3 +697,31 @@ body.login-page {
 .modal-footer {
   margin-top: 0.5rem;
 }
+
+/* Ocultar tarjetas dinámicas */
+.panel-card[data-module] {
+  display: none;
+}
+
+/* Cabecera y área de usuario */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.btn-logout {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
