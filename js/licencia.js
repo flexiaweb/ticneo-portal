@@ -115,7 +115,8 @@ export async function activarCodigoLicencia(codigoInput, userId) {
 
     // B. Actualizar el documento del usuario con la nueva fecha de expiración
     await updateDoc(doc(db, "usuarios", userId), {
-      licenciaExpiracion: fechaExpiracion
+      licenciaExpiracion: fechaExpiracion,
+      licenciaNombre: licenciaDoc.id
     });
 
     alert(`¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
