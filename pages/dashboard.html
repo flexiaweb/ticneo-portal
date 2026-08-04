@@ -1,21 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticneo Portal</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <style>
-      .panel-card[data-module] {
-        display: none; /* Se mostrarán dinámicamente según permisos */
-      }
-    </style>
-    <!-- Carga de módulos de autenticación y lógica principal -->
-    <script type="module" src="../js/auth.js"></script>
-    <script type="module" src="../js/app.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticneo Portal</title>
+  
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/app.js"></script>
+</head>
 <body>
-  <header>
+
+  <header class="main-header">
     <a href="dashboard.html" class="brand">
       <div class="brand-icon">T</div>
       <div class="brand-title">
@@ -23,31 +20,28 @@
         <p>Departamento de Sistemas</p>
       </div>
     </a>
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <span id="userInfoDisplay" style="color: #94a3b8; font-size: 0.85rem;">
-        <!-- Se rellenará dinámicamente con JS -->
-      </span>
-      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+
+    <div class="user-controls">
+      <span id="userInfoDisplay" class="user-info"></span>
+      <button onclick="logout()" class="btn-secondary btn-logout">
         🚪 Salir
       </button>
     </div>
   </header>
 
   <main>
-    <div class="section-header">
+    <section class="section-header">
       <h2>Selección de Módulo</h2>
       <p>Selecciona el módulo al que deseas acceder:</p>
-    </div>
+    </section>
 
-    <!-- Grid con las tarjetas de los módulos -->
     <div class="dashboard-grid">
-      <!-- Inventario General Empresa -->
       <a href="inventario-empresa.html" class="panel-card" data-module="inventario-empresa.html">
         <div class="card-top">
           <div class="card-icon">🖥️</div>
           <span class="card-badge badge-primary">Equipamiento</span>
         </div>
-        <div>
+        <div class="card-body">
           <h3 class="card-title">Inventario de Empresa</h3>
           <p class="card-desc">Asignación de ordenadores, monitores, periféricos y accesorios por empleado y departamento.</p>
         </div>
@@ -55,14 +49,13 @@
           <span>Abrir módulo &rarr;</span>
         </div>
       </a>
-      
-      <!-- Almacén de Sistemas -->
+
       <a href="almacen.html" class="panel-card" data-module="almacen.html">
         <div class="card-top">
           <div class="card-icon">📦</div>
           <span class="card-badge badge-primary">Almacén</span>
         </div>
-        <div>
+        <div class="card-body">
           <h3 class="card-title">Almacén de Sistemas</h3>
           <p class="card-desc">Control de inventario, equipos en stock, periféricos y registro de entradas/salidas de hardware.</p>
         </div>
@@ -71,13 +64,12 @@
         </div>
       </a>
 
-      <!-- Almacén de Sistemas -->
       <a href="camaras.html" class="panel-card" data-module="camaras.html">
         <div class="card-top">
           <div class="card-icon">📹</div>
           <span class="card-badge badge-primary">Seguridad</span>
         </div>
-        <div>
+        <div class="card-body">
           <h3 class="card-title">Cámaras de Seguridad</h3>
           <p class="card-desc">Monitoreo y gestión sobre el plano interactivo de la empresa, control de IPs, orientación y estados.</p>
         </div>
@@ -85,14 +77,13 @@
           <span>Abrir módulo &rarr;</span>
         </div>
       </a>
-      
-      <!-- Gestión de Usuarios -->
+
       <a href="usuarios.html" class="panel-card" data-module="usuarios.html">
         <div class="card-top">
           <div class="card-icon">👥</div>
           <span class="card-badge badge-primary">Administración</span>
         </div>
-        <div>
+        <div class="card-body">
           <h3 class="card-title">Gestión de Usuarios</h3>
           <p class="card-desc">Administración de acceso al portal, creación de cuentas, asignación de roles y control de permisos.</p>
         </div>
@@ -100,7 +91,6 @@
           <span>Abrir módulo &rarr;</span>
         </div>
       </a>
-      
     </div>
   </main>
 
