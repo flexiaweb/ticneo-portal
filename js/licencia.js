@@ -79,7 +79,7 @@ export async function verificarLicenciaUsuario(userId) {
   }
 }
 
-// 3. ACTIVAR UN CÓDIGO DE LICENCIA
+// ACTIVAR UN CÓDIGO DE LICENCIA (Soporta múltiples usuarios por licencia)
 export async function activarCodigoLicencia(codigoInput, userId) {
   const codigoLimpio = codigoInput.trim().toUpperCase();
 
@@ -95,31 +95,45 @@ export async function activarCodigoLicencia(codigoInput, userId) {
     const licenciaDoc = querySnapshot.docs[0];
     const licenciaData = licenciaDoc.data();
 
-    if (licenciaData.usada) {
-      throw new Error("Este código de licencia ya ha sido utilizado.");
+    // Obtener valores con límites por defecto
+    const usosMaximos = Number(licenciaData.usosMaximos) || 1;
+    const usosActuales = Number(licenciaData.usosActuales) || 0;
+    const usuariosUso = licenciaData.usuarios || [];
+
+    // Validar si el usuario ya activó esta misma licencia anteriormente
+    if (usuariosUso.includes(userId)) {
+      throw new Error("Ya has activado este código de licencia en tu cuenta anteriormente.");
     }
 
-    // Calcular fechas dinámicamente según diasDuracion (number/int64)
+    // Validar si la licencia alcanzó el número máximo de usuarios
+    if (usosActuales >= usosMaximos || licenciaData.usada === true) {
+      throw new Error(`Este código ha alcanzado el límite máximo de usuarios (${usosMaximos}).`);
+    }
+
+    // Calcular fechas
     const ahora = new Date();
     const dias = Number(licenciaData.diasDuracion) || 30;
     const fechaExpiracion = new Date();
     fechaExpiracion.setDate(ahora.getDate() + dias);
 
+    const nuevosUsos = usosActuales + 1;
+    const estaAgotada = nuevosUsos >= usosMaximos;
+
     // A. Actualizar el documento de la licencia en Firestore
     await updateDoc(doc(db, "licencias", licenciaDoc.id), {
-      usada: true,
-      usuarioId: userId,
-      fechaActivacion: ahora,
-      fechaExpiracion: fechaExpiracion
+      usosActuales: nuevosUsos,
+      usada: estaAgotada, // Se marca como 'usada: true' sólo cuando alcanza el máximo
+      usuarios: [...usuariosUso, userId], // Añade el ID de este usuario a la lista
+      ultimaActivacion: ahora
     });
 
-    // B. Actualizar el documento del usuario con la nueva fecha de expiración
+    // B. Actualizar el documento del usuario
     await updateDoc(doc(db, "usuarios", userId), {
       licenciaExpiracion: fechaExpiracion,
       licenciaNombre: licenciaDoc.id
     });
 
-    alert(`¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
+    alert(`🎉 ¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
     
     // Ocultar modal y recargar para aplicar cambios
     ocultarModalLicencia();
