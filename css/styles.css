@@ -742,3 +742,31 @@ body.login-page {
 .panel-card[data-module] {
   display: none;
 }
+
+/* Botón de usuario en el Header */
+.user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #ffffff;
+  color: #0b0914; /* Texto en tono oscuro para contrastar con fondo blanco */
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+  border: 1px solid #ffffff;
+}
+
+.user-btn:hover {
+  background-color: #f1f5f9; /* Cambia a un gris muy suave al pasar el ratón */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25);
+  color: #000000;
+}
+
+.user-btn i, .user-btn span.user-icon {
+  font-size: 1rem;
+}
