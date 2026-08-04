@@ -10,8 +10,8 @@
 </head>
 <body>
 
-  <!-- Header Sticky -->
-  <header>
+  <!-- Encabezado Principal -->
+  <header class="header-sticky">
     <a href="dashboard.html" class="brand">
       <div class="brand-icon">T</div>
       <div class="brand-title">
@@ -21,54 +21,60 @@
     </a>
 
     <div class="user-info">
-      <span id="userInfoDisplay" style="color: var(--text-muted); font-size: 0.85rem;"></span>
-      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+      <span id="userInfoDisplay" class="user-name"></span>
+      <button type="button" onclick="logout()" class="btn-secondary btn-sm">
         🚪 Salir
       </button>
     </div>
   </header>
 
-  <!-- Layout Principal -->
-  <main>
+  <!-- Contenido Principal -->
+  <main class="main-container">
     <a href="dashboard.html" class="btn-back">&larr; Volver al Portal Principal</a>
 
     <!-- Header de Sección -->
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+    <section class="section-header">
       <div>
         <h2>Inventario General de Empresa</h2>
         <p>Control y asignación de puestos de trabajo, ordenadores, pantallas y periféricos.</p>
       </div>
-      <button onclick="openFormModal()" class="btn-primary">Nuevo Registro</button>
-    </div>
+      <button type="button" onclick="openFormModal()" class="btn-primary">Nuevo Registro</button>
+    </section>
 
-    <!-- Barra de Filtros y Búsqueda -->
-    <div class="table-controls">
-      <div class="search-box" style="flex: 1; min-width: 260px;">
-        <input type="text" id="searchInput" oninput="filterTable()" placeholder="🔍 Buscar por empleado, ID PC, modelo o departamento...">
+    <!-- Controles de Tabla (Filtros y Búsqueda) -->
+    <section class="table-controls">
+      <div class="search-box">
+        <input 
+          type="text" 
+          id="searchInput" 
+          oninput="filterTable()" 
+          placeholder="🔍 Buscar por empleado, ID PC, modelo o departamento..."
+          aria-label="Buscar en inventario"
+        >
       </div>
       <div class="filter-group">
         <div class="filter-select">
-          <select id="statusFilter" onchange="filterTable()">
+          <select id="statusFilter" onchange="filterTable()" aria-label="Filtrar por estado">
             <option value="Todos">Todos los Estados</option>
             <option value="En uso">En uso</option>
             <option value="En stock">En stock</option>
           </select>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Tabla Principal Resumida -->
+    <!-- Tabla Principal -->
     <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Empleado</th>
-            <th>Ubicación / Dpto</th>
-            <th>ID PC</th>
-            <th>Marca y Modelo</th>
-            <th>Pantallas y Periféricos</th>
-            <th>Estado</th>
-            <th style="text-align: right;">Acciones</th>
+            <th scope="col">Empleado</th>
+            <th scope="col">Ubicación / Dpto</th>
+            <th scope="col">ID PC</th>
+            <th scope="col">Marca y Modelo</th>
+            <th scope="col">Pantallas y Periféricos</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">Acciones</th>
           </tr>
         </thead>
         <tbody id="inventoryTableBody">
@@ -80,68 +86,63 @@
     </div>
   </main>
 
-  <!-- MODAL 1: FICHA DE DETALLE COMPLETO (👁️) -->
-  <div id="detailModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 600px;">
+  <!-- MODAL 1: FICHA DE DETALLE COMPLETO -->
+  <div id="detailModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="detailTitle" hidden>
+    <div class="modal-card modal-sm">
       <div class="modal-header">
         <h3 id="detailTitle">Detalle del Puesto</h3>
-        <button onclick="closeDetailModal()" class="btn-close">&times;</button>
+        <button type="button" onclick="closeDetailModal()" class="btn-close" aria-label="Cerrar modal">&times;</button>
       </div>
       
-      <div id="detailBody" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; font-size: 0.9rem; color: var(--text-main);">
-        <!-- Se rellena dinámicamente desde JS -->
+      <div id="detailBody" class="modal-body-detail">
+        <!-- Relleno dinámico mediante JS -->
       </div>
 
-      <div class="modal-footer" style="margin-top: 1.5rem;">
-        <button onclick="closeDetailModal()" class="btn-secondary">Cerrar</button>
+      <div class="modal-footer">
+        <button type="button" onclick="closeDetailModal()" class="btn-secondary">Cerrar</button>
       </div>
     </div>
   </div>
 
   <!-- MODAL 2: CREAR / EDITAR REGISTRO -->
-  <div id="formModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+  <div id="formModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+    <div class="modal-card modal-md">
       <div class="modal-header">
         <h3 id="modalTitle">Nuevo Registro de Equipamiento</h3>
-        <button onclick="closeFormModal()" class="btn-close">&times;</button>
+        <button type="button" onclick="closeFormModal()" class="btn-close" aria-label="Cerrar formulario">&times;</button>
       </div>
 
-      <form id="equipForm" onsubmit="saveEquipment(event)" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <form id="equipForm" onsubmit="saveEquipment(event)" class="form-vertical">
         <input type="hidden" id="recordId">
 
-        <!-- Sección 1: Datos Empleado y Ordenador Unificados -->
-        <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
-          <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
-            👤 Empleado y Equipo Asignado
-          </legend>
+        <!-- Sección 1: Empleado y Equipo Asignado -->
+        <fieldset class="form-section">
+          <legend>👤 Empleado y Equipo Asignado</legend>
           
-          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-            <!-- Nombre en ancho completo -->
+          <div class="form-stack">
             <div class="form-group full-width">
-              <label>Nombre y Apellidos *</label>
+              <label for="empNombre">Nombre y Apellidos *</label>
               <input type="text" id="empNombre" required placeholder="Ej. Juan Pérez García">
             </div>
 
-            <!-- Fila: ID PC y Marca/Modelo -->
             <div class="form-grid">
               <div class="form-group">
-                <label>ID Inventario PC *</label>
+                <label for="pcId">ID Inventario PC *</label>
                 <input type="text" id="pcId" required placeholder="SFT-XXXXX">
               </div>
               <div class="form-group">
-                <label>Marca y Modelo</label>
+                <label for="pcModelo">Marca y Modelo</label>
                 <input type="text" id="pcModelo" placeholder="Ej. Lenovo ThinkPad L14">
               </div>
             </div>
 
-            <!-- Fila: Departamento y Ubicación -->
             <div class="form-grid">
               <div class="form-group">
-                <label>Departamento</label>
+                <label for="empDpto">Departamento</label>
                 <input type="text" id="empDpto" placeholder="Ej. Contabilidad, IT, RRHH">
               </div>
               <div class="form-group">
-                <label>Zona / Ubicación</label>
+                <label for="empZona">Zona / Ubicación</label>
                 <input type="text" id="empZona" placeholder="Ej. Planta 2 / Mesa 14">
               </div>
             </div>
@@ -149,12 +150,11 @@
         </fieldset>
 
         <!-- Sección 2: Monitores -->
-        <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
-          <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
-            🖥️ Monitores
-          </legend>
-          <div class="form-group" style="margin-bottom: 0.8rem;">
-            <label>Nº Pantallas Empresa</label>
+        <fieldset class="form-section">
+          <legend>🖥️ Monitores</legend>
+
+          <div class="form-group space-bottom">
+            <label for="pantallasNum">Nº Pantallas Empresa</label>
             <select id="pantallasNum" onchange="toggleScreensInputs()">
               <option value="0">0 Pantallas</option>
               <option value="1">1 Pantalla</option>
@@ -162,25 +162,24 @@
             </select>
           </div>
 
-          <div id="pantalla1Block" class="form-group" style="display: none; margin-bottom: 0.8rem;">
-            <label>Pantalla 1: Modelo y Pulgadas</label>
+          <div id="pantalla1Block" class="form-group space-bottom hidden">
+            <label for="p1Modelo">Pantalla 1: Modelo y Pulgadas</label>
             <input type="text" id="p1Modelo" placeholder="Ej. Dell 24 pulgadas P2419H">
           </div>
 
-          <div id="pantalla2Block" class="form-group" style="display: none;">
-            <label>Pantalla 2: Modelo y Pulgadas</label>
+          <div id="pantalla2Block" class="form-group hidden">
+            <label for="p2Modelo">Pantalla 2: Modelo y Pulgadas</label>
             <input type="text" id="p2Modelo" placeholder="Ej. Dell 24 pulgadas P2419H">
           </div>
         </fieldset>
 
         <!-- Sección 3: Periféricos y Notas -->
-        <fieldset style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: rgba(12, 9, 20, 0.4);">
-          <legend style="color: var(--primary-light); font-weight: 600; font-size: 0.85rem; padding: 0 0.4rem; text-transform: uppercase;">
-            ⌨️ Periféricos, Estado y Notas
-          </legend>
-          <div class="form-grid" style="margin-bottom: 0.8rem;">
+        <fieldset class="form-section">
+          <legend>⌨️ Periféricos, Estado y Notas</legend>
+
+          <div class="form-grid space-bottom">
             <div class="form-group">
-              <label>Conexión / Tipo Teclado</label>
+              <label for="monTeclado">Conexión / Tipo Teclado</label>
               <select id="monTeclado">
                 <option value="USB">USB</option>
                 <option value="BLUETOOTH">BLUETOOTH</option>
@@ -190,7 +189,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Conexión / Tipo Ratón</label>
+              <label for="monRaton">Conexión / Tipo Ratón</label>
               <select id="monRaton">
                 <option value="USB">USB</option>
                 <option value="BLUETOOTH">BLUETOOTH</option>
@@ -200,13 +199,13 @@
             </div>
           </div>
 
-          <div class="form-grid" style="margin-bottom: 0.8rem;">
+          <div class="form-grid space-bottom">
             <div class="form-group">
-              <label>Otros Accesorios</label>
+              <label for="accesorios">Otros Accesorios</label>
               <input type="text" id="accesorios" placeholder="Docking station, cascos, etc.">
             </div>
             <div class="form-group">
-              <label>Estado</label>
+              <label for="estadoRegistro">Estado</label>
               <select id="estadoRegistro">
                 <option value="En uso">En uso</option>
                 <option value="En stock">En stock</option>
@@ -215,12 +214,12 @@
           </div>
 
           <div class="form-group full-width">
-            <label>Notas Adicionales</label>
+            <label for="notasRegistro">Notas Adicionales</label>
             <textarea id="notasRegistro" rows="2" placeholder="Observaciones sobre el estado o material..."></textarea>
           </div>
         </fieldset>
 
-        <!-- Pie del Modal -->
+        <!-- Pie del Formulario -->
         <div class="modal-footer">
           <button type="button" onclick="closeFormModal()" class="btn-secondary">Cancelar</button>
           <button type="submit" id="btnSaveRecord" class="btn-primary">Guardar Registro</button>
