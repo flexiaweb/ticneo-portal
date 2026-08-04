@@ -29,9 +29,7 @@ function asegurarModalEnDOM() {
         </form>
 
         <div style="margin-top: 1.5rem;">
-          <button id="btnLicenciaLogout" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.85rem;">
-            🚪 Cerrar Sesión
-          </button>
+          <button id="btnLicenciaLogout" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.85rem;">Cerrar Sesión</button>
         </div>
       </div>
     </div>
@@ -120,7 +118,7 @@ export async function activarCodigoLicencia(codigoInput, userId) {
       licenciaExpiracion: fechaExpiracion
     });
 
-    alert(`🎉 ¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
+    alert(`¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
     
     // Ocultar modal y recargar para aplicar cambios
     ocultarModalLicencia();
