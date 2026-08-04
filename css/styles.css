@@ -598,6 +598,38 @@ body.login-page {
   text-align: center;
 }
 
+/* Ajustes de espaciado para el formulario de Login */
+.login-card .form-group {
+  text-align: left;
+  margin-bottom: 1.25rem; /* Margen entre cada campo de texto */
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem; /* Separación entre el <label> y el <input> */
+}
+
+.login-card .form-group label {
+  display: block;
+  color: var(--text-muted, #ccc);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-card .form-group input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(12, 9, 20, 0.7);
+  border: 1px solid var(--border-color, #2d264f);
+  color: #fff;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.login-card button[type="submit"] {
+  margin-top: 1.5rem; /* Margen superior para alejar el botón del campo de contraseña */
+}
+
 .login-card .brand-icon {
   margin: 0 auto 1rem auto;
   width: 50px;
