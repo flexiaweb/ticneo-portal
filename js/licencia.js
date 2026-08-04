@@ -13,7 +13,7 @@ export async function verificarLicenciaUsuario(userId) {
     const userData = userSnap.data();
 
     // Administradores exentos de licencia (Opcional, eliminar si los admin también necesitan)
-    if (userData.rol === 'admin') return true;
+    //if (userData.rol === 'admin') return true;
 
     // Si no tiene fecha de expiración configurada
     if (!userData.licenciaExpiracion) {
