@@ -39,7 +39,7 @@ async function cargarLicencias() {
   }
 }
 
-// 2. RENDERIZAR TABLA DE LICENCIAS
+// 2. RENDERIZAR TABLA DE LICENCIAS (Corregido paso de parámetros al botón)
 function renderizarTabla(lista) {
   const tbody = document.getElementById('tablaLicenciasBody');
   if (!tbody) return;
@@ -55,10 +55,12 @@ function renderizarTabla(lista) {
     const usosMax = lic.usosMaximos ?? 1;
     const usosAct = lic.usosActuales ?? 0;
     const restantes = Math.max(0, usosMax - usosAct);
-    const estaAgotada = lic.usada === true || usosAct >= usosMax;
+    
+    // Una licencia está desactivada si usada === true o si los usos se agotaron
+    const estaInactiva = lic.usada === true || usosAct >= usosMax;
 
-    const badgeClass = estaAgotada ? 'badge-salida' : 'badge-entrada';
-    const badgeText = estaAgotada ? 'Agotada / Inactiva' : 'Disponible';
+    const badgeClass = estaInactiva ? 'badge-salida' : 'badge-entrada';
+    const badgeText = estaInactiva ? 'Agotada / Inactiva' : 'Disponible';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -71,11 +73,11 @@ function renderizarTabla(lista) {
       <td><strong style="color: ${restantes > 0 ? '#4ade80' : '#f87171'};">${restantes}</strong></td>
       <td><span class="badge-mov ${badgeClass}">${badgeText}</span></td>
       <td>
-        <button class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="verUsuariosLicencia('${lic.id}')">
+        <button class="btn-action" style="margin-right: 0.3rem;" onclick="verUsuariosLicencia('${lic.id}')">
           <i class="fa-solid fa-users"></i> Usuarios (${(lic.usuarios || []).length})
         </button>
-        <button class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="cambiarEstadoLicencia('${lic.id}', ${!lic.usada})">
-          <i class="fa-solid fa-power-off"></i> ${lic.usada ? 'Activar' : 'Desactivar'}
+        <button class="btn-action ${lic.usada ? '' : 'btn-danger'}" onclick="cambiarEstadoLicencia('${lic.id}', ${lic.usada === true})">
+          <i class="fa-solid fa-power-off"></i> ${lic.usada ? 'Habilitar' : 'Inhabilitar'}
         </button>
       </td>
     `;
@@ -174,22 +176,22 @@ document.getElementById('formNuevaLicencia')?.addEventListener('submit', async (
   }
 });
 
-// 6. DETALLE DE USUARIOS QUE USARON LA LICENCIA
+// 6. DETALLE DE USUARIOS QUE ACTIVARON LA LICENCIA (Sintaxis </ul> corregida)
 window.verUsuariosLicencia = async function(licenciaId) {
   const modal = document.getElementById('modalVerUsuarios');
   const container = document.getElementById('listaUsuariosContainer');
   document.getElementById('tituloModalUsuarios').textContent = `Usuarios: ${licenciaId}`;
   
   modal.classList.add('active');
-  container.innerHTML = `<p>Cargando usuarios...</p>`;
+  container.innerHTML = `<p class="loading-box">Cargando usuarios...</p>`;
 
   const lic = licenciasCache.find(l => l.id === licenciaId);
   if (!lic || !lic.usuarios || lic.usuarios.length === 0) {
-    container.innerHTML = `<p style="color: var(--text-muted);">Ningún usuario ha activado esta licencia todavía.</p>`;
+    container.innerHTML = `<p style="color: var(--text-muted); padding: 1rem 0;">Ningún usuario ha activado esta licencia todavía.</p>`;
     return;
   }
 
-  let html = '<ul style="list-style: none; padding: 0;">';
+  let html = '<ul style="list-style: none; padding: 0; width: 100%;">';
   
   for (const userId of lic.usuarios) {
     try {
@@ -199,23 +201,27 @@ window.verUsuariosLicencia = async function(licenciaId) {
         let expira = '-';
         if (u.licenciaExpiracion && typeof u.licenciaExpiracion.toDate === 'function') {
           expira = u.licenciaExpiracion.toDate().toLocaleDateString('es-ES');
+        } else if (u.licenciaExpiracion instanceof Date) {
+          expira = u.licenciaExpiracion.toLocaleDateString('es-ES');
         }
+        
         html += `
-          <li style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+          <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <strong>${u.nombre || 'Usuario'}</strong> (${u.email || userId})
+              <strong style="color: #fff;">${u.nombre || 'Usuario'}</strong> 
+              <span style="color: var(--text-muted); font-size: 0.85rem;">(${u.email || userId})</span>
             </div>
-            <span style="color: var(--text-muted); font-size: 0.85rem;">Expira: ${expira}</span>
+            <span style="color: var(--primary-light); font-size: 0.85rem; font-weight: 500;">Expira: ${expira}</span>
           </li>`;
       } else {
-        html += `<li style="padding: 0.5rem;">ID de usuario: ${userId} (No encontrado)</li>`;
+        html += `<li style="padding: 0.5rem; color: var(--text-muted);">ID de usuario: ${userId} (No encontrado)</li>`;
       }
     } catch (e) {
-      html += `<li style="padding: 0.5rem;">Error al leer usuario ${userId}</li>`;
+      html += `<li style="padding: 0.5rem; color: #f87171;">Error al leer usuario ${userId}</li>`;
     }
   }
   
-  html += 'ul>';
+  html += '</ul>'; // <-- Etiqueta corregida aquí
   container.innerHTML = html;
 };
 
@@ -223,18 +229,28 @@ window.cerrarModalUsuarios = function() {
   document.getElementById('modalVerUsuarios').classList.remove('active');
 };
 
-// 7. DESACTIVAR / ACTIVAR MANUALMENTE
-window.cambiarEstadoLicencia = async function(licenciaId, nuevoEstadoUsada) {
-  const confirmacion = confirm(`¿Deseas ${nuevoEstadoUsada ? 'desactivar' : 'activar'} la licencia ${licenciaId}?`);
+// 7. DESACTIVAR / ACTIVAR MANUALMENTE EN FIRESTORE (Actualización en tiempo real)
+window.cambiarEstadoLicencia = async function(licenciaId, actualmenteUsada) {
+  const nuevoEstado = !actualmenteUsada; // Invierte el valor booleano
+  const accionText = nuevoEstado ? 'inhabilitar' : 'habilitar';
+
+  const confirmacion = confirm(`¿Estás seguro de que deseas ${accionText} la licencia "${licenciaId}"?`);
   if (!confirmacion) return;
 
   try {
-    await updateDoc(doc(db, "licencias", licenciaId), {
-      usada: nuevoEstadoUsada
+    const docRef = doc(db, "licencias", licenciaId);
+    
+    // Guarda el cambio directo en Firestore
+    await updateDoc(docRef, {
+      usada: nuevoEstado
     });
+
+    // Vuelve a cargar los datos en tiempo real de Firestore para refrescar la tabla y KPIs
     await cargarLicencias();
+
   } catch (error) {
-    alert("Error al actualizar la licencia: " + error.message);
+    console.error("Error al cambiar estado de la licencia:", error);
+    alert("⚠️ Error al actualizar Firestore: " + error.message);
   }
 };
 
