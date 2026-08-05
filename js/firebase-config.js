@@ -44,5 +44,7 @@ export {
   query, 
   where,
   serverTimestamp,
+  arrayRemove,
+  increment,
   orderBy 
 };
