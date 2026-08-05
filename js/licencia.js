@@ -182,10 +182,16 @@ function escucharEventosModal() {
       const input = document.getElementById('inputCodigoLicencia');
       const errorMsg = document.getElementById('licenciaErrorMsg');
       const btn = document.getElementById('btnActivarLicencia');
-      const userRaw = localStorage.getItem('ticneo_user');
+      
+      // 🔄 Obtener sesión de forma segura desde sessionStorage
+      const sessionRaw = sessionStorage.getItem('ticneo_session') || localStorage.getItem('ticneo_user');
+      const user = sessionRaw ? JSON.parse(sessionRaw) : null;
 
-      if (!userRaw) return;
-      const user = JSON.parse(userRaw);
+      if (!user || !user.id) {
+        alert("⚠️ Sesión no encontrada. Por favor vuelve a iniciar sesión.");
+        logout();
+        return;
+      }
 
       if (errorMsg) errorMsg.style.display = 'none';
       if (btn) {
