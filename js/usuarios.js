@@ -17,7 +17,7 @@ let rolesList = [];
 
 // 📌 LISTA GLOBAL DE MÓDULOS DEL SISTEMA
 const MODULOS_SISTEMA = [
-  { id: 'index.html', nombre: 'Inicio / Dashboard' },
+  { id: 'dashboard.html', nombre: 'Inicio / Dashboard' },
   { id: 'usuarios.html', nombre: 'Gestión de Usuarios' },
   { id: 'almacen.html', nombre: 'Gestión de Inventario' },
   { id: 'inventario-empresa.html', nombre: 'Inventario de Empresa' },
