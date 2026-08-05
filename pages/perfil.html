@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Perfil - Ticneo Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  
+  <!-- Carga de módulos de autenticación y lógica del perfil -->
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/perfil.js"></script>
+</head>
+<body>
+
+  <!-- Encabezado Principal -->
+  <header>
+    <a href="dashboard.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="perfil.html" id="userInfoDisplay" class="user-btn"></a>
+      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+        🚪 Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main>
+    <a href="dashboard.html" class="btn-back">&larr; Volver al Portal Principal</a>
+
+    <!-- Encabezado de Sección -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2>Mi Perfil</h2>
+        <p>Gestiona tu información personal, credenciales de acceso y estado de licencia.</p>
+      </div>
+    </div>
+
+    <!-- Contenedor del Formulario de Perfil (usando la estructura de table-container para consistencia visual) -->
+    <div class="table-container" style="border-radius: 12px; border-top: 1px solid var(--border-color); padding: 2rem;">
+      <form id="perfilForm" onsubmit="actualizarPerfil(event)">
+        <input type="hidden" id="perfilUserId">
+        
+        <div class="form-grid">
+          <!-- Nombre (Editable) -->
+          <div class="form-group full-width">
+            <label for="perfilNombre">Nombre Completo</label>
+            <input type="text" id="perfilNombre" placeholder="Ej. Juan Pérez" required>
+          </div>
+        
+          <!-- Email (Solo lectura, normalmente no se permite cambiar sin confirmación) -->
+          <div class="form-group">
+            <label for="perfilEmail">Correo Electrónico</label>
+            <input type="email" id="perfilEmail" disabled style="background: rgba(255,255,255,0.05); cursor: not-allowed; color: var(--text-muted);">
+            <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+              El correo electrónico no puede modificarse.
+            </small>
+          </div>
+
+          <!-- Rol (Solo lectura) -->
+          <div class="form-group">
+            <label for="perfilRol">Rol Asignado</label>
+            <input type="text" id="perfilRol" disabled style="background: rgba(255,255,255,0.05); cursor: not-allowed; color: var(--text-muted); text-transform: capitalize;">
+          </div>
+
+          <!-- Estado de la Licencia (Info visual) -->
+          <div class="form-group full-width" style="background: rgba(139, 92, 246, 0.1); border: 1px dashed var(--accent-violet); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+            <label style="color: var(--primary-light);">Estado de Licencia Activa</label>
+            <p id="perfilLicenciaInfo" style="font-size: 0.9rem; margin-top: 0.5rem;">
+              Cargando información de licencia...
+            </p>
+          </div>
+
+          <!-- Cambio de Contraseña -->
+          <div class="form-group full-width" style="margin-top: 1rem;">
+            <label for="perfilPassword">Nueva Contraseña</label>
+            <input type="password" id="perfilPassword" placeholder="Escribe aquí solo si deseas cambiar tu clave">
+            <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">
+              ⚠️ Deja este campo en blanco para conservar tu contraseña actual. Mínimo 6 caracteres.
+            </small>
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="perfilPasswordConfirm">Confirmar Nueva Contraseña</label>
+            <input type="password" id="perfilPasswordConfirm" placeholder="Repite la nueva contraseña">
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+          <button type="submit" id="btnActualizarPerfil" class="btn-primary" style="padding: 0.6rem 1.5rem;">
+            💾 Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+</body>
+</html>
