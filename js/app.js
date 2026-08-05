@@ -15,23 +15,33 @@ import {
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
 
+
 // -------------------------------------------------------------
-// 🔒 CONTROL DE VISIBILIDAD DE TARJETAS EN INDEX.HTML POR ROL
+// 🔒 CONTROL DE VISIBILIDAD DE TARJETAS EN INDEX.HTML/DASHBOARD POR ROL
 // -------------------------------------------------------------
 async function renderDashboardPermissions() {
   const cards = document.querySelectorAll('.panel-card[data-module]');
-  if (cards.length === 0) return; // No estamos en index.html o no hay tarjetas con data-module
+  if (cards.length === 0) return; // Si no hay tarjetas con data-module, salir
 
-  const userRaw = localStorage.getItem('ticneo_user');
-  if (!userRaw) return;
+  // 🔄 LEER DESDE SESSIONSTORAGE (O LOCALSTORAGE COMO FALLBACK)
+  const sessionRaw = sessionStorage.getItem('ticneo_session') || localStorage.getItem('ticneo_user');
+  if (!sessionRaw) return;
 
-  const user = JSON.parse(userRaw);
-  const userRol = user.rol || 'usuario';
+  const session = JSON.parse(sessionRaw);
 
   try {
+    // 🛡️ Obtener el rol actualizado directamente de Firestore usando el ID de la sesión
+    const userRef = doc(db, "usuarios", session.id);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) return;
+
+    const userData = userSnap.data();
+    const userRol = userData.rol || session.rol || 'usuario';
+
     let permisos = [];
     
-    // Si no es admin, consultar el documento del rol en la colección 'roles'
+    // Si no es admin, consultar los permisos configurados para su rol en la colección 'roles'
     if (userRol !== 'admin') {
       const rolRef = doc(db, "roles", userRol);
       const rolSnap = await getDoc(rolRef);
@@ -41,14 +51,14 @@ async function renderDashboardPermissions() {
       }
     }
 
-    // Filtrar la visibilidad de cada tarjeta según permisos
+    // Mostrar o esconder cada tarjeta según los permisos autorizados
     cards.forEach(card => {
       const moduleName = card.getAttribute('data-module');
 
       if (userRol === 'admin' || permisos.includes(moduleName)) {
-        card.style.display = 'flex'; // O 'block', según tu diseño CSS en styles.css
+        card.style.display = 'flex'; // Hace visible la tarjeta del módulo
       } else {
-        card.style.display = 'none';
+        card.style.display = 'none';  // Oculta módulos no permitidos
       }
     });
 
