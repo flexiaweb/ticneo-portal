@@ -96,7 +96,7 @@ export async function activarCodigoLicencia(codigoInput, userId) {
     const licenciaData = licenciaDoc.data();
 
     // Obtener valores con límites por defecto
-    const usosMaximos = Number(licenciaData.usosMaximos) || 1;
+    const usosMaximos = licenciaData.usosMaximos !== undefined ? Number(licenciaData.usosMaximos) : 1;
     const usosActuales = Number(licenciaData.usosActuales) || 0;
     const usuariosUso = licenciaData.usuarios || [];
 
@@ -104,7 +104,12 @@ export async function activarCodigoLicencia(codigoInput, userId) {
     if (usuariosUso.includes(userId)) {
       throw new Error("Ya has activado este código de licencia en tu cuenta anteriormente.");
     }
-
+    
+    // Si la licencia tiene 0 usos máximos o está deshabilitada manualmente
+    if (usosMaximos === 0) {
+      throw new Error("Este código de licencia está desactivado o no permite ningún usuario.");
+    }
+    
     // Validar si la licencia alcanzó el número máximo de usuarios
     if (usosActuales >= usosMaximos || licenciaData.usada === true) {
       throw new Error(`Este código ha alcanzado el límite máximo de usuarios (${usosMaximos}).`);
