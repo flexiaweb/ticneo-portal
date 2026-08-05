@@ -291,7 +291,11 @@ function showResetError(msg) {
 
 // Guardar sesión y llevar al usuario al Dashboard
 function saveSessionAndRedirect(sessionData) {
-  sessionStorage.setItem('ticneo_session', JSON.stringify(sessionData));
+  sessionStorage.setItem('ticneo_session', JSON.stringify({
+    id: sessionData.id,
+    nombre: sessionData.nombre || 'Usuario',
+    rol: sessionData.rol
+  }));
   window.location.href = getRelativePath('dashboard.html');
 }
 
