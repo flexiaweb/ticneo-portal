@@ -10,7 +10,9 @@ import {
   deleteDoc, 
   addDoc,
   arrayRemove, 
-  increment   
+  increment,
+  query,
+  where
 } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
