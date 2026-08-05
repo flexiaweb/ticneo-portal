@@ -31,48 +31,56 @@ async function checkAuth() {
   const path = window.location.pathname.toLowerCase();
   const isLoginPage = path.endsWith('/') || path.endsWith('/index.html');
 
-  if (!userRaw && !isLoginPage) {
+  if (!sessionRaw && !isLoginPage) {
     window.location.href = getRelativePath('index.html');
     return;
   }
 
-  if (userRaw && isLoginPage) {
+  if (sessionRaw && isLoginPage) {
     window.location.href = getRelativePath('dashboard.html');
     return;
   }
 
-  if (userRaw && !isLoginPage) {
+  if (sessionRaw && !isLoginPage) {
     const session = JSON.parse(sessionRaw);
 
-    const userRef = doc(db, "usuarios", session.id);
-    const userSnap = await getDoc(userRef);
+    try {
+      // 🛡️ PASO 1: Consultar usuario real en Firestore (previene alteración de datos desde DevTools)
+      const userRef = doc(db, "usuarios", session.id);
+      const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists() || !userSnap.data().activo) {
-      logout();
-      return;
-    }
-
-    const userDataReal = userSnap.data();
-
-    // 1. Verificar si la licencia está activa y vigente
-    const tieneLicenciaValida = await verificarLicenciaUsuario(user.id);
-    if (!tieneLicenciaValida) {
-      return; 
-    }
-    
-    let currentPage = path.split('/').pop() || 'dashboard.html';
-    if (!currentPage || currentPage === '') currentPage = 'dashboard.html';
-
-    const tienePermiso = await verificarPermisoRol(userDataReal.rol, currentPage);
-
-    if (!tienePermiso) {
-      alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
-      
-      if (currentPage !== 'dashboard.html') {
-        window.location.href = getRelativePath('dashboard.html');
-      } else {
+      if (!userSnap.exists() || userSnap.data().activo === false) {
+        alert("⚠️ Tu cuenta no existe o ha sido desactivada.");
         logout();
+        return;
       }
+
+      const userDataReal = userSnap.data();
+
+      // 🛡️ PASO 2: Verificar si la licencia está activa y vigente
+      const tieneLicenciaValida = await verificarLicenciaUsuario(session.id);
+      if (!tieneLicenciaValida) {
+        return; // El modal inyectado por licencia.js bloquea la pantalla
+      }
+      
+      // 🛡️ PASO 3: Validar permisos utilizando el ROL REAL desde la BBDD
+      let currentPage = path.split('/').pop() || 'dashboard.html';
+      if (!currentPage || currentPage === '') currentPage = 'dashboard.html';
+
+      const tienePermiso = await verificarPermisoRol(userDataReal.rol, currentPage);
+
+      if (!tienePermiso) {
+        alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
+        
+        if (currentPage !== 'dashboard.html') {
+          window.location.href = getRelativePath('dashboard.html');
+        } else {
+          logout();
+        }
+      }
+
+    } catch (error) {
+      console.error("Error al validar la sesión contra Firestore:", error);
     }
   }
 }
@@ -149,21 +157,17 @@ async function loginUser(email, password) {
       
       const sessionDataTemp = {
         id: userFound.id,
-        nombre: userFound.nombre,
-        email: userFound.email,
-        rol: userFound.rol
+        nombre: userFound.nombre || 'Usuario'
       };
 
       openForceChangePasswordModal(sessionDataTemp);
       return;
     }
 
-    // Si no requiere cambio, crear sesión y redirigir al Dashboard
+    // Si no requiere cambio, crear sesión mínima segura y redirigir al Dashboard
     saveSessionAndRedirect({
       id: userFound.id,
-      nombre: userFound.nombre,
-      email: userFound.email,
-      rol: userFound.rol
+      nombre: userFound.nombre || 'Usuario'
     });
 
   } catch (error) {
@@ -287,16 +291,11 @@ function showResetError(msg) {
 
 // Guardar sesión y llevar al usuario al Dashboard
 function saveSessionAndRedirect(sessionData) {
-    const sessionData = {
-    id: userDoc.id,
-    nombre: userData.nombre || 'Usuario'
-    };
-  
   sessionStorage.setItem('ticneo_session', JSON.stringify(sessionData));
   window.location.href = getRelativePath('dashboard.html');
 }
 
-// 5. CERRAR SESIÓN (Lleva de vuelta al Login en index.html)
+// 5. CERRAR SESIÓN (Lleva de vuelta al Login en index.html y limpia todo el almacenamiento)
 function logout() {
   localStorage.removeItem('ticneo_user');
   sessionStorage.clear();
@@ -308,10 +307,10 @@ function displayLoggedUser() {
   const userDisplay = document.getElementById('userInfoDisplay');
   if (!userDisplay) return;
 
-  const userRaw = localStorage.getItem('ticneo_user');
-  if (userRaw) {
-    const user = JSON.parse(userRaw);
-    const nombre = user.nombre || user.email || 'Usuario';
+  const sessionRaw = sessionStorage.getItem('ticneo_session') || localStorage.getItem('ticneo_user');
+  if (sessionRaw) {
+    const session = JSON.parse(sessionRaw);
+    const nombre = session.nombre || 'Usuario';
 
     userDisplay.innerHTML = `<span style="color: #0b0914;">${nombre}</span>`;
   }
