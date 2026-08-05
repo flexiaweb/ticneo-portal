@@ -4,56 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Licencias - Ticneo</title>
-  <link rel="stylesheet" href="../css/styles.css"> <!-- O tu ruta CSS global -->
+  <link rel="stylesheet" href="../css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-  <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
-  <header class="navbar">
-    <div class="nav-left">
-      <a href="dashboard.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
-      <h2>🔑 Panel de Licencias</h2>
-    </div>
-    <div class="nav-right">
-      <span id="userInfoDisplay">Cargando...</span>
-      <button onclick="logout()" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+  <!-- HEADER & NAVEGACIÓN -->
+  <header>
+    <a href="dashboard.html" class="brand">
+      <div class="brand-icon">🔑</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Gestión de Licencias</p>
+      </div>
+    </a>
+    <div class="user-controls">
+      <span id="userInfoDisplay" class="user-name">Cargando...</span>
+      <button onclick="logout()" class="btn-action btn-danger btn-logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Salir
+      </button>
     </div>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="main-container">
+  <!-- LAYOUT PRINCIPAL -->
+  <main>
+    <a href="dashboard.html" class="btn-back">
+      <i class="fa-solid fa-arrow-left"></i> Volver al Dashboard
+    </a>
 
-    <!-- BARRA SUPERIOR DE ACCIONES Y BÚSQUEDA -->
-    <div class="top-controls">
-      <div class="search-box">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInputLicencias" placeholder="Buscar por código..." oninput="filtrarLicencias()">
+    <!-- CABECERA DE SECCIÓN -->
+    <div class="section-header">
+      <div>
+        <h2>🔑 Panel de Administración de Licencias</h2>
+        <p>Genera nuevos códigos, audita el consumo de licencias y controla los usuarios autorizados.</p>
       </div>
       <button class="btn-primary" onclick="abrirModalCrearLicencia()">
         <i class="fa-solid fa-plus"></i> Nueva Licencia
       </button>
     </div>
 
-    <!-- TARJETAS DE MÉTRICAS / KPIS -->
+    <!-- TARJETAS DE KPIS -->
     <div class="kpi-grid">
       <div class="kpi-card">
-        <h3>Total Licencias</h3>
-        <p id="kpiTotalLicencias">0</p>
+        <span class="kpi-title">Total Licencias</span>
+        <span class="kpi-value" id="kpiTotalLicencias">0</span>
       </div>
       <div class="kpi-card">
-        <h3>Licencias Activas</h3>
-        <p id="kpiLicenciasActivas" style="color: #4ade80;">0</p>
+        <span class="kpi-title">Licencias Activas</span>
+        <span class="kpi-value entrada" id="kpiLicenciasActivas">0</span>
       </div>
       <div class="kpi-card">
-        <h3>Licencias Agotadas</h3>
-        <p id="kpiLicenciasAgotadas" style="color: #f87171;">0</p>
+        <span class="kpi-title">Licencias Agotadas</span>
+        <span class="kpi-value salida" id="kpiLicenciasAgotadas">0</span>
       </div>
     </div>
 
-    <!-- TABLA DE LICENCIAS -->
+    <!-- TABLA DE LICENCIAS Y CONTROLES -->
+    <div class="table-controls">
+      <div class="search-box">
+        <input type="text" id="searchInputLicencias" placeholder="🔍 Buscar por código o ID..." oninput="filtrarLicencias()">
+      </div>
+    </div>
+
     <div class="table-container">
-      <table>
+      <table class="data-table">
         <thead>
           <tr>
             <th>Documento / Código</th>
@@ -66,7 +80,7 @@
         </thead>
         <tbody id="tablaLicenciasBody">
           <tr>
-            <td colspan="6" style="text-align:center; padding: 2rem;">Cargando licencias...</td>
+            <td colspan="6" class="loading-box">Cargando licencias...</td>
           </tr>
         </tbody>
       </table>
@@ -74,13 +88,13 @@
   </main>
 
   <!-- MODAL: CREAR NUEVA LICENCIA -->
-  <div id="modalCrearLicencia" class="modal">
-    <div class="modal-content">
+  <div id="modalCrearLicencia" class="modal-overlay">
+    <div class="modal-card">
       <div class="modal-header">
         <h3>Generar Nueva Licencia</h3>
         <button class="btn-close" onclick="cerrarModalCrearLicencia()">&times;</button>
       </div>
-      <form id="formNuevaLicencia">
+      <form id="formNuevaLicencia" class="form-stack">
         <div class="form-group">
           <label for="inputDocId">ID del Documento (Nombre único)</label>
           <input type="text" id="inputDocId" placeholder="Ej: TICNEO-2026-PREMIUM" required>
@@ -88,17 +102,19 @@
         <div class="form-group">
           <label for="inputCodigo">Código de Licencia (String de activación)</label>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="inputCodigo" placeholder="Escribe o genera un código" required>
+            <input type="text" id="inputCodigo" placeholder="Escribe o genera un código" style="flex: 1;" required>
             <button type="button" class="btn-secondary" onclick="generarCodigoAleatorio()">Generar</button>
           </div>
         </div>
-        <div class="form-group">
-          <label for="inputDias">Días de Duración</label>
-          <input type="number" id="inputDias" value="30" min="1" required>
-        </div>
-        <div class="form-group">
-          <label for="inputUsosMax">Número Máximo de Usuarios</label>
-          <input type="number" id="inputUsosMax" value="1" min="1" required>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="inputDias">Días de Duración</label>
+            <input type="number" id="inputDias" value="30" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="inputUsosMax">Máx. Usuarios</label>
+            <input type="number" id="inputUsosMax" value="1" min="1" required>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" onclick="cerrarModalCrearLicencia()">Cancelar</button>
@@ -108,15 +124,15 @@
     </div>
   </div>
 
-  <!-- MODAL: VER USUARIOS QUE ACTIVARON LA LICENCIA -->
-  <div id="modalVerUsuarios" class="modal">
-    <div class="modal-content">
+  <!-- MODAL: VER USUARIOS ASIGNADOS -->
+  <div id="modalVerUsuarios" class="modal-overlay">
+    <div class="modal-card modal-md">
       <div class="modal-header">
         <h3 id="tituloModalUsuarios">Usuarios Asignados</h3>
         <button class="btn-close" onclick="cerrarModalUsuarios()">&times;</button>
       </div>
-      <div id="listaUsuariosContainer" style="padding: 1rem 0;">
-        <p>Cargando usuarios...</p>
+      <div id="listaUsuariosContainer" class="modal-body-detail">
+        <p class="loading-box">Cargando usuarios...</p>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" onclick="cerrarModalUsuarios()">Cerrar</button>
