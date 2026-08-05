@@ -113,29 +113,41 @@ export async function activarCodigoLicencia(codigoInput, userId) {
     // Calcular fechas
     const ahora = new Date();
     const dias = Number(licenciaData.diasDuracion) || 30;
-    const fechaExpiracion = new Date();
-    fechaExpiracion.setDate(ahora.getDate() + dias);
+    const fechaExpiracionUsuario = new Date();
+    fechaExpiracionUsuario.setDate(ahora.getDate() + dias);
 
+    // Mantener la fecha de primera activación o asignarla si es la primera vez
+    const fechaActivacionGlobal = licenciaData.fechaActivacion ? 
+                                  licenciaData.fechaActivacion : 
+                                  ahora;
+
+    // Calcular fecha de expiración global de la licencia
+    const fechaExpiracionGlobal = licenciaData.fechaExpiracion ? 
+                                 licenciaData.fechaExpiracion : 
+                                 fechaExpiracionUsuario;
+    
+    
     const nuevosUsos = usosActuales + 1;
     const estaAgotada = nuevosUsos >= usosMaximos;
 
     // A. Actualizar el documento de la licencia en Firestore
     await updateDoc(doc(db, "licencias", licenciaDoc.id), {
       usosActuales: nuevosUsos,
-      usada: estaAgotada, // Se marca como 'usada: true' sólo cuando alcanza el máximo
-      usuarios: [...usuariosUso, userId], // Añade el ID de este usuario a la lista
+      usada: estaAgotada, 
+      usuarios: [...usuariosUso, userId],
+      fechaActivacion: fechaActivacionGlobal,
+      fechaExpiracion: fechaExpiracionGlobal,
       ultimaActivacion: ahora
     });
 
     // B. Actualizar el documento del usuario
     await updateDoc(doc(db, "usuarios", userId), {
-      licenciaExpiracion: fechaExpiracion,
+      licenciaExpiracion: fechaExpiracionUsuario,
       licenciaNombre: licenciaDoc.id
     });
 
-    alert(`🎉 ¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
-    
-    // Ocultar modal y recargar para aplicar cambios
+    alert(`¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
+  
     ocultarModalLicencia();
     window.location.reload();
 
