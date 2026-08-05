@@ -25,33 +25,33 @@ function getRelativePath(targetFile) {
 async function loginWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user; // Objeto del usuario de Firebase Auth
-
+    const user = result.user;
     const userRef = doc(db, "usuarios", user.uid);
+
+    // 1. Verificar si ya existe
     const userSnap = await getDoc(userRef);
 
-    // Si el usuario no existe en Firestore, se crea su perfil base manteniendo sincronizado el ID
     if (!userSnap.exists()) {
+      console.log("Usuario nuevo detectado. Creando documento en Firestore...");
+      
+      // 2. Crear el documento usando el UID de Auth como ID del documento
       await setDoc(userRef, {
         nombre: user.displayName || 'Usuario Google',
         email: user.email.toLowerCase(),
-        rol: 'usuario', // Rol por defecto
+        rol: 'admin', // Asigna 'admin' inicialmente para tus pruebas
         activo: true,
         creadoEl: new Date()
       });
-    } else {
-      const userData = userSnap.data();
-      if (userData.activo === false) {
-        await signOut(auth);
-        alert("⚠️ Tu cuenta se encuentra inactiva o deshabilitada.");
-        return;
-      }
+      
+      console.log("Documento creado con éxito en usuarios/", user.uid);
     }
 
+    // 3. Redirigir solo cuando Firestore haya respondido
     window.location.href = getRelativePath('dashboard.html');
+
   } catch (error) {
-    console.error("Error al iniciar sesión con Google:", error);
-    alert("⚠️ Error en autenticación con Google: " + error.message);
+    console.error("Error completo en la autenticación/creación:", error);
+    alert("⚠️ Error: " + error.message);
   }
 }
 
