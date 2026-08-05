@@ -202,9 +202,9 @@ async function deleteUserDoc(uid) {
       const q = query(licenciasRef, where("usuarios", "array-contains", uid));
       const querySnap = await getDocs(q);
 
-      // 2. Iterar con for...of para asegurar que la promesa de Firestore finalice correctamente
+      // 2. Iterar sobre los documentos encontrados
       if (!querySnap.empty) {
-        for (const docLic of querySnapshot.docs) {
+        for (const docLic of querySnap.docs) {
           const licRef = doc(db, "licencias", docLic.id);
           const licData = docLic.data();
           
