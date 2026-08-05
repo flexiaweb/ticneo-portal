@@ -8,7 +8,9 @@ import {
   setDoc,
   updateDoc, 
   deleteDoc, 
-  addDoc 
+  addDoc,
+  arrayRemove, 
+  increment   
 } from './firebase-config.js';
 import bcrypt from 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm';
 
@@ -189,15 +191,46 @@ async function toggleUserStatus(uid, currentStatus) {
   }
 }
 
-// 4. ELIMINAR USUARIO
+// 4. ELIMINAR USUARIO (Y LIBERAR SU LICENCIA EN FIRESTORE)
 async function deleteUserDoc(uid) {
-  if (confirm("¿Estás seguro de eliminar este usuario?")) {
+  if (confirm("¿Estás seguro de eliminar este usuario? Si tiene una licencia asignada, será liberada automáticamente.")) {
     try {
-      await deleteDoc(doc(db, "usuarios", uid));
+      // Step A: Buscar los datos del usuario antes de borrarlo para ver si tiene licencia asignada
+      const userRef = doc(db, "usuarios", uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const licenciaId = userData.licenciaId; // ID del documento de la licencia asociada
+
+        // Step B: Si tiene licencia vinculada, restamos 1 uso y quitamos su ID del array
+        if (licenciaId) {
+          const licenciaRef = doc(db, "licencias", licenciaId);
+          const licSnap = await getDoc(licenciaRef);
+
+          if (licSnap.exists()) {
+            const licData = licSnap.data();
+            const usosMax = licData.usosMaximos || 1;
+            const nuevosUsos = Math.max(0, (licData.usosActuales || 1) - 1);
+
+            await updateDoc(licenciaRef, {
+              usuarios: arrayRemove(uid),       // Quita el UID del array de la licencia
+              usosActuales: increment(-1),      // Resta 1 al conteo
+              usada: nuevosUsos >= usosMax      // Si baja del máximo, la marca como no agotada (false)
+            });
+          }
+        }
+      }
+
+      // Step C: Eliminar el documento del usuario de Firestore
+      await deleteDoc(userRef);
+
+      // Step D: Recargar la lista en pantalla
       loadUsers();
+
     } catch (error) {
-      console.error("Error al eliminar usuario:", error);
-      alert("Error al eliminar el usuario.");
+      console.error("Error al eliminar el usuario y liberar su licencia:", error);
+      alert("Error al eliminar el usuario: " + error.message);
     }
   }
 }
