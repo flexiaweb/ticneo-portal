@@ -27,40 +27,43 @@ function getRelativePath(targetFile) {
 
 // 1. VERIFICAR AUTENTICACIÓN Y PERMISOS DE ACCESO AL CARGAR PÁGINA
 async function checkAuth() {
-  const userRaw = localStorage.getItem('ticneo_user');
+  const sessionRaw = sessionStorage.getItem('ticneo_session') || localStorage.getItem('ticneo_user');
   const path = window.location.pathname.toLowerCase();
-  
-  // La página de login ahora es la raíz (/) o index.html
   const isLoginPage = path.endsWith('/') || path.endsWith('/index.html');
 
-  // Redirigir si no hay sesión iniciada y no está en la página de login (index.html)
   if (!userRaw && !isLoginPage) {
     window.location.href = getRelativePath('index.html');
     return;
   }
 
-  // Redirigir al Dashboard si ya inició sesión e intenta entrar al login (index.html)
   if (userRaw && isLoginPage) {
     window.location.href = getRelativePath('dashboard.html');
     return;
   }
 
-  // 🔒 VALIDACIÓN DE PERMISOS DINÁMICOS POR ROL EN FIRESTORE
   if (userRaw && !isLoginPage) {
-    const user = JSON.parse(userRaw);
+    const session = JSON.parse(sessionRaw);
+
+    const userRef = doc(db, "usuarios", session.id);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists() || !userSnap.data().activo) {
+      logout();
+      return;
+    }
+
+    const userDataReal = userSnap.data();
 
     // 1. Verificar si la licencia está activa y vigente
     const tieneLicenciaValida = await verificarLicenciaUsuario(user.id);
     if (!tieneLicenciaValida) {
-      // Si la licencia caduco o no existe, el modal se abre bloqueando la pantalla
       return; 
     }
     
-    // Obtener el nombre del archivo actual (ej. "dashboard.html", "camaras.html")
-    let currentPage = path.split('/').pop();
+    let currentPage = path.split('/').pop() || 'dashboard.html';
     if (!currentPage || currentPage === '') currentPage = 'dashboard.html';
 
-    const tienePermiso = await verificarPermisoRol(user.rol, currentPage);
+    const tienePermiso = await verificarPermisoRol(userDataReal.rol, currentPage);
 
     if (!tienePermiso) {
       alert("⚠️ No tienes permisos asignados para acceder a este módulo.");
@@ -284,7 +287,12 @@ function showResetError(msg) {
 
 // Guardar sesión y llevar al usuario al Dashboard
 function saveSessionAndRedirect(sessionData) {
-  localStorage.setItem('ticneo_user', JSON.stringify(sessionData));
+    const sessionData = {
+    id: userDoc.id,
+    nombre: userData.nombre || 'Usuario'
+    };
+  
+  sessionStorage.setItem('ticneo_session', JSON.stringify(sessionData));
   window.location.href = getRelativePath('dashboard.html');
 }
 
