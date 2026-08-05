@@ -79,12 +79,11 @@ export async function verificarLicenciaUsuario(userId) {
   }
 }
 
-// ACTIVAR UN CÓDIGO DE LICENCIA (Soporta múltiples usuarios por licencia)
+// ACTIVAR UN CÓDIGO DE LICENCIA
 export async function activarCodigoLicencia(codigoInput, userId) {
   const codigoLimpio = codigoInput.trim().toUpperCase();
 
   try {
-    // Buscar la licencia en la colección 'licencias'
     const q = query(collection(db, "licencias"), where("codigo", "==", codigoLimpio));
     const querySnapshot = await getDocs(q);
 
@@ -95,65 +94,58 @@ export async function activarCodigoLicencia(codigoInput, userId) {
     const licenciaDoc = querySnapshot.docs[0];
     const licenciaData = licenciaDoc.data();
 
-    // Obtener valores con límites por defecto
     const usosMaximos = licenciaData.usosMaximos !== undefined ? Number(licenciaData.usosMaximos) : 1;
     const usosActuales = Number(licenciaData.usosActuales) || 0;
     const usuariosUso = licenciaData.usuarios || [];
 
-    // Validar si el usuario ya activó esta misma licencia anteriormente
     if (usuariosUso.includes(userId)) {
       throw new Error("Ya has activado este código de licencia en tu cuenta anteriormente.");
     }
-    
-    // Si la licencia tiene 0 usos máximos o está deshabilitada manualmente
+
     if (usosMaximos === 0) {
-      throw new Error("Este código de licencia está desactivado o no permite ningún usuario.");
+      throw new Error("Este código de licencia está desactivado.");
     }
-    
-    // Validar si la licencia alcanzó el número máximo de usuarios
+
     if (usosActuales >= usosMaximos || licenciaData.usada === true) {
       throw new Error(`Este código ha alcanzado el límite máximo de usuarios (${usosMaximos}).`);
     }
 
-    // Calcular fechas
+    // --- CÁLCULO DE FECHAS DEFINIDAS CORRECTAMENTE ---
     const ahora = new Date();
     const dias = Number(licenciaData.diasDuracion) || 30;
+
+    // 1. Fecha de expiración para este usuario
     const fechaExpiracionUsuario = new Date();
     fechaExpiracionUsuario.setDate(ahora.getDate() + dias);
 
-    // Mantener la fecha de primera activación o asignarla si es la primera vez
-    const fechaActivacionGlobal = licenciaData.fechaActivacion ? 
-                                  licenciaData.fechaActivacion : 
-                                  ahora;
+    // 2. Fechas para el documento global de licencia
+    const fechaActivacionGlobal = licenciaData.fechaActivacion ? licenciaData.fechaActivacion : ahora;
+    const fechaExpiracionGlobal = licenciaData.fechaExpiracion ? licenciaData.fechaExpiracion : fechaExpiracionUsuario;
 
-    // Calcular fecha de expiración global de la licencia
-    const fechaExpiracionGlobal = licenciaData.fechaExpiracion ? 
-                                 licenciaData.fechaExpiracion : 
-                                 fechaExpiracionUsuario;
-    
-    
     const nuevosUsos = usosActuales + 1;
     const estaAgotada = nuevosUsos >= usosMaximos;
 
-    // A. Actualizar el documento de la licencia en Firestore
+    // A. Actualizar documento en 'licencias'
     await updateDoc(doc(db, "licencias", licenciaDoc.id), {
       usosActuales: nuevosUsos,
-      usada: estaAgotada, 
+      usada: estaAgotada,
       usuarios: [...usuariosUso, userId],
       fechaActivacion: fechaActivacionGlobal,
       fechaExpiracion: fechaExpiracionGlobal,
       ultimaActivacion: ahora
     });
 
-    // B. Actualizar el documento del usuario
+    // B. Actualizar documento en 'usuarios'
     await updateDoc(doc(db, "usuarios", userId), {
       licenciaExpiracion: fechaExpiracionUsuario,
       licenciaNombre: licenciaDoc.id
     });
 
-    alert(`¡Licencia activada con éxito! Acceso concedido por ${dias} días (hasta el ${fechaExpiracion.toLocaleDateString('es-ES')}).`);
-  
-    ocultarModalLicencia();
+    alert(`🎉 ¡Licencia activada con éxito! Acceso concedido por ${dias} días.`);
+    
+    if (typeof ocultarModalLicencia === "function") {
+      ocultarModalLicencia();
+    }
     window.location.reload();
 
   } catch (error) {
