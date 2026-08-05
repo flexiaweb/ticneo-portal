@@ -195,33 +195,35 @@ async function toggleUserStatus(uid, currentStatus) {
 async function deleteUserDoc(uid) {
   if (confirm("¿Estás seguro de eliminar este usuario? Si tiene una licencia asignada, será liberada automáticamente.")) {
     try {
-      // 1. Buscar si existe alguna licencia que tenga a este usuario registrado en su array "usuarios"
+      // 1. Buscar licencias que tengan a este usuario en su array "usuarios"
       const licenciasRef = collection(db, "licencias");
       const q = query(licenciasRef, where("usuarios", "array-contains", uid));
       const querySnap = await getDocs(q);
 
-      // 2. Si se encuentra la licencia, la actualizamos
+      // 2. Iterar con for...of para asegurar que la promesa de Firestore finalice correctamente
       if (!querySnap.empty) {
-        querySnap.forEach(async (docLic) => {
+        for (const docLic of querySnapshot.docs) {
           const licRef = doc(db, "licencias", docLic.id);
           const licData = docLic.data();
           
-          const usosMax = licData.usosMaximos || 1;
-          const nuevosUsos = Math.max(0, (licData.usosActuales || 1) - 1);
+          const usosMax = Number(licData.usosMaximos) || 1;
+          const usosAct = Number(licData.usosActuales) || 1;
+          const nuevosUsos = Math.max(0, usosAct - 1);
 
+          // Actualizar la licencia restando 1 uso y removiendo el UID
           await updateDoc(licRef, {
-            usuarios: arrayRemove(uid),       // Remueve la UID del array "usuarios"
-            usosActuales: increment(-1),      // Resta 1 a usosActuales
-            usada: nuevosUsos >= usosMax      // Si baja del cupo máximo, pasa a false (disponible)
+            usuarios: arrayRemove(uid),
+            usosActuales: increment(-1),
+            usada: nuevosUsos >= usosMax
           });
-        });
+        }
       }
 
       // 3. Eliminar el documento del usuario en la colección "usuarios"
       await deleteDoc(doc(db, "usuarios", uid));
 
       // 4. Refrescar la tabla en pantalla
-      loadUsers();
+      await loadUsers();
 
     } catch (error) {
       console.error("Error al eliminar el usuario y liberar su licencia:", error);
