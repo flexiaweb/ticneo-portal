@@ -195,37 +195,32 @@ async function toggleUserStatus(uid, currentStatus) {
 async function deleteUserDoc(uid) {
   if (confirm("¿Estás seguro de eliminar este usuario? Si tiene una licencia asignada, será liberada automáticamente.")) {
     try {
-      // Step A: Buscar los datos del usuario antes de borrarlo para ver si tiene licencia asignada
-      const userRef = doc(db, "usuarios", uid);
-      const userSnap = await getDoc(userRef);
+      // 1. Buscar si existe alguna licencia que tenga a este usuario registrado en su array "usuarios"
+      const licenciasRef = collection(db, "licencias");
+      const q = query(licenciasRef, where("usuarios", "array-contains", uid));
+      const querySnap = await getDocs(q);
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const licenciaId = userData.licenciaId; // ID del documento de la licencia asociada
+      // 2. Si se encuentra la licencia, la actualizamos
+      if (!querySnap.empty) {
+        querySnap.forEach(async (docLic) => {
+          const licRef = doc(db, "licencias", docLic.id);
+          const licData = docLic.data();
+          
+          const usosMax = licData.usosMaximos || 1;
+          const nuevosUsos = Math.max(0, (licData.usosActuales || 1) - 1);
 
-        // Step B: Si tiene licencia vinculada, restamos 1 uso y quitamos su ID del array
-        if (licenciaId) {
-          const licenciaRef = doc(db, "licencias", licenciaId);
-          const licSnap = await getDoc(licenciaRef);
-
-          if (licSnap.exists()) {
-            const licData = licSnap.data();
-            const usosMax = licData.usosMaximos || 1;
-            const nuevosUsos = Math.max(0, (licData.usosActuales || 1) - 1);
-
-            await updateDoc(licenciaRef, {
-              usuarios: arrayRemove(uid),       // Quita el UID del array de la licencia
-              usosActuales: increment(-1),      // Resta 1 al conteo
-              usada: nuevosUsos >= usosMax      // Si baja del máximo, la marca como no agotada (false)
-            });
-          }
-        }
+          await updateDoc(licRef, {
+            usuarios: arrayRemove(uid),       // Remueve la UID del array "usuarios"
+            usosActuales: increment(-1),      // Resta 1 a usosActuales
+            usada: nuevosUsos >= usosMax      // Si baja del cupo máximo, pasa a false (disponible)
+          });
+        });
       }
 
-      // Step C: Eliminar el documento del usuario de Firestore
-      await deleteDoc(userRef);
+      // 3. Eliminar el documento del usuario en la colección "usuarios"
+      await deleteDoc(doc(db, "usuarios", uid));
 
-      // Step D: Recargar la lista en pantalla
+      // 4. Refrescar la tabla en pantalla
       loadUsers();
 
     } catch (error) {
