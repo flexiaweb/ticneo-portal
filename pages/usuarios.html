@@ -110,47 +110,50 @@
   </div>
 
   <!-- Modal Pre-autorizar Usuario -->
-<div id="userModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Pre-autorizar Usuario</h2>
-      <span class="close-modal" onclick="closeUserModal()">&times;</span>
+  <div id="userModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Pre-autorizar Usuario</h3>
+        <button type="button" class="btn-close" onclick="closeUserModal()">&times;</button>
+      </div>
+  
+      <p class="modal-description">
+        Registra un correo de Google para permitirle el acceso al portal y definir su rol inicial.
+      </p>
+  
+      <form id="userForm" onsubmit="preAutorizarUsuario(event)">
+        <div class="form-grid">
+          <!-- Correo Electrónico (Ocupa la fila completa) -->
+          <div class="form-group full-width">
+            <label for="usuarioEmail">Correo Electrónico (Google)</label>
+            <input type="email" id="usuarioEmail" placeholder="usuario@empresa.com" required>
+          </div>
+  
+          <!-- Rol Asignado -->
+          <div class="form-group">
+            <label for="usuarioRol">Rol Asignado</label>
+            <select id="usuarioRol" required>
+              <option value="" disabled selected>Cargando roles...</option>
+            </select>
+          </div>
+  
+          <!-- Estado Inicial -->
+          <div class="form-group">
+            <label for="usuarioEstado">Estado Inicial</label>
+            <select id="usuarioEstado" required>
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+        </div>
+  
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeUserModal()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btnGuardarUsuario">Autorizar Acceso</button>
+        </div>
+      </form>
     </div>
-
-    <form id="userForm" onsubmit="preAutorizarUsuario(event)">
-      <!-- Correo Electrónico -->
-      <div class="form-group">
-        <label>CORREO ELECTRÓNICO (GOOGLE)</label>
-        <input type="email" id="usuarioEmail" placeholder="ejemplo@empresa.com" required>
-      </div>
-
-      <!-- Rol y Estado -->
-      <div class="form-row">
-        <div class="form-group">
-          <label>ROL ASIGNADO</label>
-          <select id="usuarioRol" required>
-            <option value="Admin">Admin</option>
-            <option value="Sistemas">Sistemas</option>
-            <option value="Usuario">Usuario</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>ESTADO INICIAL</label>
-          <select id="usuarioEstado" required>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" onclick="closeUserModal()">Cancelar</button>
-        <button type="submit" class="btn-primary" id="btnGuardarUsuario">Autorizar Acceso</button>
-      </div>
-    </form>
   </div>
-</div>
  
   <!-- Modal de Éxito al Crear Usuario (Para Copiar Accesos) -->
   <div id="successModal" class="modal-overlay">
