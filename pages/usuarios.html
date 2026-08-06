@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Usuarios - Ticneo Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  
+  <!-- Carga de módulos de autenticación y lógica principal -->
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/usuarios.js"></script>
+</head>
+<body>
+
+  <!-- Encabezado Principal -->
+  <header>
+    <a href="dashboard.html" class="brand">
+      <div class="brand-icon">T</div>
+      <div class="brand-title">
+        <h1>Ticneo Portal</h1>
+        <p>Departamento de Sistemas</p>
+      </div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="perfil.html" id="userInfoDisplay" class="user-btn"></a>
+      <button onclick="logout()" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+        🚪 Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main>
+    <a href="dashboard.html" class="btn-back">&larr; Volver al Portal Principal</a>
+
+    <!-- Encabezado de Sección con Botones -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2>Gestión de Usuarios</h2>
+        <p>Administración de accesos, cuentas de usuario y permisos del sistema.</p>
+      </div>
+      
+      <!-- Contenedor con ambos botones alineados -->
+      <div style="display: flex; gap: 0.5rem;">
+        <button onclick="openRolesModal()" class="btn-secondary">⚙️ Permisos de Rol</button>
+        <button onclick="openUserModal()" class="btn-primary">Nuevo Usuario</button>
+      </div>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="table-container" style="border-radius: 12px; border-top: 1px solid var(--border-color);">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Correo Electrónico</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="5" class="loading-box">Cargando lista de usuarios...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal para Configurar Permisos de Rol -->
+  <div id="rolesModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>⚙️ Configurar Permisos por Rol</h3>
+        <button type="button" onclick="closeRolesModal()" class="btn-close">&times;</button>
+      </div>
+
+      <form id="formPermisos" onsubmit="guardarPermisos(event)">
+        <div class="form-group full-width" style="margin-bottom: 1rem;">
+          <label for="selectRol">Selecciona el Rol:</label>
+          <select id="selectRol" onchange="cargarPermisosDelRol(this.value)" required>
+            <!-- Se puebla dinámicamente desde Firestore (admin, usuario, etc.) -->
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="newRoleInput">Crear un Nuevo Rol:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="newRoleInput" placeholder="Ej. supervisor, tecnico" style="flex: 1;">
+            <button type="button" onclick="createNewRole()" class="btn-action">➕ Crear Rol</button>
+          </div>
+        </div>
+
+        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          Módulos permitidos para este rol:
+        </label>
+
+        <!-- Contenedor dinámico de Checkboxes -->
+        <div id="contenedorCheckboxes" style="background: rgba(12, 9, 20, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; max-height: 220px; overflow-y: auto;">
+          <!-- Los checkboxes se generarán dinámicamente desde JS -->
+        </div>
+
+        <div class="modal-footer" style="margin-top: 1.5rem;">
+          <button type="button" onclick="closeRolesModal()" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Permisos</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Pre-autorizar Usuario -->
+<div id="userModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Pre-autorizar Usuario</h2>
+      <span class="close-modal" onclick="closeUserModal()">&times;</span>
+    </div>
+
+    <form id="userForm" onsubmit="preAutorizarUsuario(event)">
+      <!-- Correo Electrónico -->
+      <div class="form-group">
+        <label>CORREO ELECTRÓNICO (GOOGLE)</label>
+        <input type="email" id="usuarioEmail" placeholder="ejemplo@empresa.com" required>
+      </div>
+
+      <!-- Rol y Estado -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>ROL ASIGNADO</label>
+          <select id="usuarioRol" required>
+            <option value="Admin">Admin</option>
+            <option value="Sistemas">Sistemas</option>
+            <option value="Usuario">Usuario</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>ESTADO INICIAL</label>
+          <select id="usuarioEstado" required>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeUserModal()">Cancelar</button>
+        <button type="submit" class="btn-primary" id="btnGuardarUsuario">Autorizar Acceso</button>
+      </div>
+    </form>
+  </div>
+</div>
+ 
+  <!-- Modal de Éxito al Crear Usuario (Para Copiar Accesos) -->
+  <div id="successModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 450px; text-align: center;">
+      <div class="modal-header">
+        <h3>🎉 ¡Usuario Registrado!</h3>
+        <button type="button" onclick="closeSuccessModal()" class="btn-close">&times;</button>
+      </div>
+
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;">
+        El usuario ha sido registrado en Firestore. Copia sus credenciales de acceso para entregárselas:
+      </p>
+
+      <div style="background: rgba(12, 9, 20, 0.8); border: 1px dashed var(--primary-light); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+        <p style="margin-bottom: 0.4rem;"><strong>Email:</strong> <span id="createdEmail" style="color: var(--accent-cyan);"></span></p>
+        <p><strong>Contraseña Provisional:</strong> <span id="createdPass" style="color: #4ade80; font-family: monospace; font-size: 1.1rem;"></span></p>
+      </div>
+
+      <div class="modal-footer" style="justify-content: center; gap: 0.5rem;">
+        <button type="button" onclick="copyCredentials()" class="btn-primary" style="width: 100%;">
+          📋 Copiar Credenciales
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
