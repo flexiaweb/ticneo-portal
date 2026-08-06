@@ -1,6 +1,18 @@
 // app.js - Gestión de Almacén y Control de Módulos del Dashboard
-// 1. IMPORTACIONES CENTRALIZADAS DESDE TU CONFIGURACIÓN LOCAL
-import { auth, onAuthStateChanged, db, doc, getDoc } from './firebase-config.js';
+// 1. IMPORTACIONES CENTRALIZADAS COMPLETAS DESDE FIRESTORE
+import { 
+  auth, 
+  onAuthStateChanged, 
+  db, 
+  doc, 
+  getDoc,
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  orderBy,
+  serverTimestamp
+} from './firebase-config.js';
 
 let currentData = [];
 let currentView = 'history'; // 'history' o 'stock'
@@ -10,16 +22,13 @@ let currentView = 'history'; // 'history' o 'stock'
 // 🔒 CONTROL DE VISIBILIDAD DE TARJETAS EN INDEX.HTML/DASHBOARD POR ROL
 // -------------------------------------------------------------
 
-function renderDashboardPermissions() {
+function renderDashboardPermissions(user) {
   const cards = document.querySelectorAll('.panel-card[data-module]');
-  if (cards.length === 0) return;
+  if (cards.length === 0 || !user) return;
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-
-    try {
-      const userRef = doc(db, "usuarios", user.uid);
-      const userSnap = await getDoc(userRef);
+  try {
+    const userRef = doc(db, "usuarios", user.uid);
+    getDoc(userRef).then(async (userSnap) => {
       if (!userSnap.exists()) return;
 
       const userData = userSnap.data();
@@ -42,10 +51,10 @@ function renderDashboardPermissions() {
           card.style.display = 'none';
         }
       });
-    } catch (error) {
-      console.error("Error al renderizar los permisos del Dashboard:", error);
-    }
-  });
+    });
+  } catch (error) {
+    console.error("Error al renderizar los permisos del Dashboard:", error);
+  }
 }
 
 // -------------------------------------------------------------
@@ -350,14 +359,17 @@ window.filterTable = filterTable;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.submitForm = submitForm;
+window.loadSheetData = loadSheetData;
 
-// 5. INICIALIZACIÓN DE LA PÁGINA
-document.addEventListener('DOMContentLoaded', async () => {
-  // Aplicar permisos en el Dashboard (index.html)
-  await renderDashboardPermissions();
+// 5. INICIALIZACIÓN DE LA PÁGINA TRAS VERIFICAR AUTENTICACIÓN
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Aplicar permisos en el Dashboard si existen tarjetas
+    renderDashboardPermissions(user);
 
-  // Si estamos en la página del almacén, cargar sus datos
-  if (document.getElementById('tableBody')) {
-    loadSheetData();
+    // Si estamos en la página del almacén, cargar sus datos una vez autenticado
+    if (document.getElementById('tableBody')) {
+      loadSheetData();
+    }
   }
 });
